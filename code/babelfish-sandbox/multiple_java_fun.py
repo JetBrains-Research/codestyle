@@ -1,8 +1,8 @@
 """ Find all methods in file with xpath query.
-    Remove positions from them to be able to check them for equality.
+    Extend babelfish Node class with EqualityNode to override `==` operator.
 """
 import bblfsh
-
+from EqualityNode import EqualityNode
 
 def unposition_node(n):
     n.start_position.line = 0
@@ -20,7 +20,7 @@ def unposition(tree):
 
 client = bblfsh.BblfshClient("0.0.0.0:9432")
 uast = client.parse("data/MultipleFunctions.java", language="java").uast
-unposition(uast)
+uast = EqualityNode(uast)
 
 it = bblfsh.filter(uast, "//MethodDeclaration")
 for node in it:
