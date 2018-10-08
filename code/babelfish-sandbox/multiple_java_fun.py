@@ -4,20 +4,6 @@
 import bblfsh
 from EqualityNode import EqualityNode
 
-def unposition_node(n):
-    n.start_position.line = 0
-    n.start_position.offset = 0
-    n.start_position.col = 0
-    n.end_position.line = 0
-    n.end_position.offset = 0
-    n.end_position.col = 0
-
-
-def unposition(tree):
-    for n in bblfsh.iterator(tree, bblfsh.TreeOrder.PRE_ORDER):
-        unposition_node(n)
-
-
 client = bblfsh.BblfshClient("0.0.0.0:9432")
 uast = client.parse("data/MultipleFunctions.java", language="java").uast
 uast = EqualityNode(uast)
