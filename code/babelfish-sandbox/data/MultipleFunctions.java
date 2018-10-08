@@ -6,6 +6,6 @@ class MultipleFunctions {
     }
 
     static class NestedClass {
-        void fun3() {}
+        void fun1() {}
     }
 }
