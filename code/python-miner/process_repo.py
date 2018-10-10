@@ -10,20 +10,39 @@ blob_dir = "data/exploded/{}/blobs/".format(repo_name)
 os.makedirs(blob_dir, exist_ok=True)
 
 
-def extract_change_info(commit, entry):
-    new_contents = entry.a_blob.data_stream.read()
-    new_blob_id = str(entry.a_blob)
-    dump_blob(new_blob_id, new_contents)
+def is_valid(entry):
+    if entry.change_type == 'T':
+        return False
+    path = entry.a_path if entry.change_type == 'D' else entry.b_path
+    return path.endswith(".java")
 
-    old_contents = entry.b_blob.data_stream.read()
-    old_blob_id = str(entry.b_blob)
-    dump_blob(old_blob_id, old_contents)
+
+def extract_change_info(commit, entry):
+    old_blob_id = None
+    new_blob_id = None
+    old_path = None
+    new_path = None
+
+    if not is_valid(entry):
+        return None
+
+    if entry.change_type != 'A':
+        old_contents = entry.a_blob.data_stream.read()
+        old_path = entry.a_path
+        old_blob_id = str(entry.a_blob)
+        dump_blob(old_blob_id, old_contents)
+
+    if entry.change_type != 'D':
+        new_contents = entry.b_blob.data_stream.read()
+        new_path = entry.b_path
+        new_blob_id = str(entry.b_blob)
+        dump_blob(new_blob_id, new_contents)
 
     info = {'change_type': entry.change_type,
-            'old_path': entry.b_path,
-            'new_path': entry.a_path,
-            'old_content': str(entry.b_blob),
-            'new_content': str(entry.a_blob),
+            'old_path': old_path,
+            'new_path': new_path,
+            'old_content': old_blob_id,
+            'new_content': new_blob_id,
             'commit_id': str(commit),
             'author_name': commit.author.name,
             'author_email': commit.author.email,
@@ -47,17 +66,11 @@ def dump_blob(blob_id, contents):
 
 
 def get_changes(commit, parent):
-    diff_index = commit.diff(parent)
+    diff_index = parent.diff(commit)
 
     change_infos = []
 
     for entry in diff_index:
-        if entry.change_type != "M":
-            continue
-
-        if not entry.a_path.endswith(".java"):
-            continue
-
         info = extract_change_info(commit, entry)
         if info is not None:
             change_infos.append(info)
@@ -80,9 +93,10 @@ def explode_repo(project_name, path):
     total_commits = 0
     for _ in repo.iter_commits():
         total_commits += 1
-        if total_commits % 1000 == 0:
+        if total_commits % 10000 == 0:
             print("Counting commits: {}".format(total_commits))
 
+    # TODO increase for full processing
     limit = 1000
     print("{} commits in the repository. Processing {}".format(total_commits, min(limit, total_commits)))
 
@@ -99,13 +113,14 @@ def explode_repo(project_name, path):
             df = df.append(DataFrame.from_records(change_infos))
 
         processed_count += 1
-        if processed_count % 500 == 0:
+        if processed_count % 1000 == 0:
             print("Processed {} of {} commits\n".format(processed_count, min(limit, total_commits)))
             print(df.info(memory_usage='deep', verbose=False))
         if processed_count >= limit:
             break
 
-    df.to_csv("data/exploded/{}/infos.csv".format(project_name), index=False)
+    if df is not None:
+        df.to_csv("data/exploded/{}/infos.csv".format(project_name), index=False)
 
 
 explode_repo(repo_name, repo_path)
