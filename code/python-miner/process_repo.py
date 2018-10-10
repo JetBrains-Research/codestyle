@@ -1,82 +1,111 @@
-import bblfsh
-import time
-from git import Repo
+import os
 
-client = bblfsh.BblfshClient("0.0.0.0:9432")
+from git import Repo
+from pandas import DataFrame
+
+repo_name = "intellij-community"
+
+repo_path = "data/repos/{}".format(repo_name)
+blob_dir = "data/exploded/{}/blobs/".format(repo_name)
+os.makedirs(blob_dir, exist_ok=True)
+
+
+def extract_change_info(commit, entry):
+    new_contents = entry.a_blob.data_stream.read()
+    new_blob_id = str(entry.a_blob)
+    dump_blob(new_blob_id, new_contents)
+
+    old_contents = entry.b_blob.data_stream.read()
+    old_blob_id = str(entry.b_blob)
+    dump_blob(old_blob_id, old_contents)
+
+    info = {'change_type': entry.change_type,
+            'old_path': entry.b_path,
+            'new_path': entry.a_path,
+            'old_content': str(entry.b_blob),
+            'new_content': str(entry.a_blob),
+            'commit_id': str(commit),
+            'author_name': commit.author.name,
+            'author_email': commit.author.email,
+            'committer_name': commit.committer.name,
+            'committer_email': commit.committer.email,
+            'author_time': commit.authored_date,
+            'committer_time': commit.committed_date}
+
+    return info
+
+
+def dump_blob(blob_id, contents):
+    filename = "{}/{}".format(blob_dir, blob_id)
+    if os.path.exists(filename):
+        return filename
+
+    with open(filename, 'wb') as output:
+        output.write(contents)
+
+    return filename
 
 
 def get_changes(commit, parent):
     diff_index = commit.diff(parent)
-    requests = 0
-    successful_requests = 0
-    for entry in diff_index:
 
-        # Only look at modified files for now
-        # TODO handle other cases
+    change_infos = []
+
+    for entry in diff_index:
         if entry.change_type != "M":
             continue
 
-        # Keep this hardcoded for now
-        # TODO extract filtering method
         if not entry.a_path.endswith(".java"):
             continue
 
-        new_contents = entry.a_blob.data_stream.read()
-        # print("NEW CONTENTS:")
-        # print(new_contents)
+        info = extract_change_info(commit, entry)
+        if info is not None:
+            change_infos.append(info)
 
-        new_parse_response = client.parse(filename="", contents=new_contents, language="java")
-        requests += 1
-        if new_parse_response.status == 0:
-            successful_requests += 1
-
-        old_contents = entry.b_blob.data_stream.read()
-        # print("OLD CONTENTS:")
-        # print(old_contents)
-
-        old_parse_response = client.parse(filename="", contents=old_contents, language="java")
-        requests += 1
-        if old_parse_response.status == 0:
-            successful_requests += 1
-        # print(old_parse_response.status)
-
-        # TODO persist the contents
-
-    return requests, successful_requests
+    return change_infos
 
 
 def process_commit(commit):
-    print(commit)
     parents = commit.parents
     if len(parents) != 1:
-        return
+        return []
 
     parent = parents[0]
     return get_changes(commit, parent)
 
 
-def process(path):
+def explode_repo(project_name, path):
     repo = Repo(path)
 
-    commits = repo.iter_commits()
-    count = 0
-    limit = 100
-    start = time.time()
-    total = 0
-    success = 0
-    for c in commits:
-        req, succ = process_commit(c)
-        total += req
-        success += succ
-        count += 1
-        print(count)
-        if count >= limit:
+    total_commits = 0
+    for _ in repo.iter_commits():
+        total_commits += 1
+        if total_commits % 1000 == 0:
+            print("Counting commits: {}".format(total_commits))
+
+    limit = 1000
+    print("{} commits in the repository. Processing {}".format(total_commits, min(limit, total_commits)))
+
+    processed_count = 0
+    df = None
+
+    for c in repo.iter_commits():
+
+        change_infos = process_commit(c)
+
+        if df is None and len(change_infos) > 0:
+            df = DataFrame.from_records(change_infos)
+        elif len(change_infos) > 0:
+            df = df.append(DataFrame.from_records(change_infos))
+
+        processed_count += 1
+        if processed_count % 500 == 0:
+            print("Processed {} of {} commits\n".format(processed_count, min(limit, total_commits)))
+            print(df.info(memory_usage='deep', verbose=False))
+        if processed_count >= limit:
             break
-    end = time.time()
 
-    print("Processed {} commits in {} seconds".format(limit, end - start))
-    print("Made {} parse requests, of which {} were successful".format(total, success))
+    df.to_csv("data/exploded/{}/infos.csv".format(project_name), index=False)
 
 
-repo_path = "data/repos/intellij-community/"
-process(repo_path)
+explode_repo(repo_name, repo_path)

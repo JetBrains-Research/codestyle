@@ -8,7 +8,11 @@ GitPython==2.1.11
 grpcio==1.13.0
 grpcio-tools==1.13.0
 idna==2.7
+numpy==1.15.2
+pandas==0.23.4
 protobuf==3.6.1
+python-dateutil==2.7.3
+pytz==2018.5
 requests==2.19.1
 six==1.11.0
 smmap2==2.0.4
