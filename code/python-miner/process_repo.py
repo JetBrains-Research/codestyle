@@ -96,8 +96,7 @@ def explode_repo(project_name, path):
         if total_commits % 10000 == 0:
             print("Counting commits: {}".format(total_commits))
 
-    # TODO increase for full processing
-    limit = 1000
+    limit = 1000000
     print("{} commits in the repository. Processing {}".format(total_commits, min(limit, total_commits)))
 
     processed_count = 0
