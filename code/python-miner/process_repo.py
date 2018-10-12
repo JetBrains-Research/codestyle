@@ -2,6 +2,7 @@ import os
 
 from git import Repo
 from pandas import DataFrame
+import time
 
 repo_name = "intellij-community"
 
@@ -102,14 +103,20 @@ def explode_repo(project_name, path):
     processed_count = 0
     df = None
 
+    prev_time = time.time()
     change_infos_chunk = []
     for c in repo.iter_commits():
 
         change_infos_chunk += process_commit(c)
 
         processed_count += 1
-        if processed_count % 1000 == 0:
+        if processed_count % 5000 == 0:
             print("Processed {} of {} commits\n".format(processed_count, min(limit, total_commits)))
+
+            cur_time = time.time()
+            print("Last 5000 processed in {} seconds".format(time.time() - prev_time))
+            prev_time = cur_time
+
             if df is None and len(change_infos_chunk) > 0:
                 df = DataFrame.from_records(change_infos_chunk)
             elif len(change_infos_chunk) > 0:
