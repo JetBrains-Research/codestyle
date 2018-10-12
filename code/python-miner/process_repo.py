@@ -102,24 +102,29 @@ def explode_repo(project_name, path):
     processed_count = 0
     df = None
 
+    change_infos_chunk = []
     for c in repo.iter_commits():
 
-        change_infos = process_commit(c)
-
-        if df is None and len(change_infos) > 0:
-            df = DataFrame.from_records(change_infos)
-        elif len(change_infos) > 0:
-            df = df.append(DataFrame.from_records(change_infos))
+        change_infos_chunk += process_commit(c)
 
         processed_count += 1
         if processed_count % 1000 == 0:
             print("Processed {} of {} commits\n".format(processed_count, min(limit, total_commits)))
+            if df is None and len(change_infos_chunk) > 0:
+                df = DataFrame.from_records(change_infos_chunk)
+            elif len(change_infos_chunk) > 0:
+                df = df.append(DataFrame.from_records(change_infos_chunk))
+
+            if df is not None:
+                df.to_csv("data/exploded/{}/infos_incomplete.csv".format(project_name), index=False)
+
+            change_infos_chunk = []
             print(df.info(memory_usage='deep', verbose=False))
         if processed_count >= limit:
             break
 
     if df is not None:
-        df.to_csv("data/exploded/{}/infos.csv".format(project_name), index=False)
+        df.to_csv("data/exploded/{}/infos_full.csv".format(project_name), index=False)
 
 
 explode_repo(repo_name, repo_path)
