@@ -1,14 +1,16 @@
+import gzip
 import os
+import pickle
+import time
 
 import bblfsh
 import pandas as pd
-import pickle
 
 client = bblfsh.BblfshClient("0.0.0.0:9432")
 
 repo_name = "intellij-community"
 data_dir = "data/exploded/{}".format(repo_name)
-uast_dir = "data/exploded/{}/uast".format(repo_name)
+uast_dir = "data/exploded/{}/uast_zipped".format(repo_name)
 
 os.makedirs(uast_dir, exist_ok=True)
 
@@ -20,7 +22,7 @@ def is_valid_blob_id(blob_id):
 
 
 def extract_blob_ids():
-    df = pd.read_csv("{}/infos.csv".format(data_dir), index_col=None, na_values='')
+    df = pd.read_csv("{}/infos_full.csv".format(data_dir), index_col=None, na_values='')
     entries = df.to_dict('records')
     print(df.info())
     blobs = []
@@ -45,21 +47,79 @@ def extract_blob_ids():
 
 def save_uast(blob_id, uast_tree):
     filename = "{}/{}.uast".format(uast_dir, blob_id)
-    pickle.dump(uast_tree, open(filename, 'wb'))
-    print("Saved UAST to {}".format(filename))
+
+    tree = uast_tree.__getstate__()
+    with gzip.open(filename, 'wb') as f:
+        pickle.dump(tree, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def open_uast(blob_id):
+    filename = "{}/{}.uast".format(uast_dir, blob_id)
+    with gzip.open(filename, 'rb') as f:
+        uast_str = pickle.load(f)
+        uast = bblfsh.Node()
+        uast.__setstate__(uast_str)
+    return uast
+
+
+def save_parse_status(parse_status, complete):
+    postfix = "_incomplete" if not complete else ""
+    filename = "{}/parse_status{}.csv".format(data_dir, postfix)
+    pd.DataFrame.from_records(parse_status).to_csv(filename, index=False)
+
+
+def read_parse_status():
+    filename = "{}/parse_status_incomplete.csv".format(data_dir)
+    if not os.path.exists(filename):
+        return []
+    return pd.read_csv(filename, index_col=None).to_dict('records')
+
 
 def process_exploded_data():
     blobs_list = extract_blob_ids()
     blob_ids = set(blobs_list)
-    print("{} blobs in the dataset, {} unique ".format(len(blobs_list), len(blob_ids)))
+    blobs_count = len(blob_ids)
+    print("{} blobs in the dataset, {} unique ".format(len(blobs_list), blobs_count))
+
+    parse_status = read_parse_status()
+
+    processed = 0
+    successful = 0
+
+    for item in parse_status:
+        blob_ids.remove(item['blob_id'])
+        processed += 1
+        if item['status'] == "OK":
+            successful += 1
+
+    prev_time = time.time()
+
+    blob_ids = sorted(blob_ids)
+
     for b in blob_ids:
         blob = load_blob(b)
-        blob_uast = parse_blob(b, blob)
+        blob_uast, err = parse_blob(blob)
+
         if blob_uast:
-            print("blob {} parsed OK, persisting UAST".format(b))
             save_uast(b, blob_uast)
-        else:
-            print("blob {} failed to parse".format(b))
+            successful += 1
+
+        parse_status.append({
+            "blob_id": b,
+            "status": "ERROR" if err else "OK",
+            "error": err
+        })
+
+        processed += 1
+
+        if processed % 100 == 0:
+            now = time.time()
+            print("Processed {} blobs of {}, {} successfully parsed".format(processed, blobs_count, successful))
+            print("Last 100 processed in {} seconds\n".format(now - prev_time))
+            prev_time = now
+            save_parse_status(parse_status, complete=False)
+
+    save_parse_status(parse_status, complete=True)
 
 
 def load_blob(blob_id):
@@ -73,15 +133,17 @@ def load_blob(blob_id):
     return bytes(blob, 'utf-8')
 
 
-def parse_blob(blob_id, blob):
+def parse_blob(blob):
+    err = None
+    uast = None
     if not blob:
-        return None
-    print("parsing blob {} ({} bytes)".format(blob_id, len(blob)))
+        return None, "Blob not found"
     parse_response = client.parse(filename="", contents=blob, language="java")
     if parse_response.status != 0:
-        print("Could not parse blob: {}".format(blob_id))
-        return None
-    return parse_response.uast
+        err = parse_response.errors
+    else:
+        uast = parse_response.uast
+    return uast, err
 
 
 process_exploded_data()
