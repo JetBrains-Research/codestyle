@@ -112,10 +112,10 @@ def process_exploded_data():
 
         processed += 1
 
-        if processed % 100 == 0:
+        if processed % 1000 == 0:
             now = time.time()
             print("Processed {} blobs of {}, {} successfully parsed".format(processed, blobs_count, successful))
-            print("Last 100 processed in {} seconds\n".format(now - prev_time))
+            print("Last 1000 processed in {} seconds\n".format(now - prev_time))
             prev_time = now
             save_parse_status(parse_status, complete=False)
 
@@ -138,12 +138,16 @@ def parse_blob(blob):
     uast = None
     if not blob:
         return None, "Blob not found"
-    parse_response = client.parse(filename="", contents=blob, language="java")
-    if parse_response.status != 0:
-        err = parse_response.errors
-    else:
-        uast = parse_response.uast
-    return uast, err
+    try:
+        parse_response = client.parse(filename="", contents=blob, language="java")
+        if parse_response.status != 0:
+            err = parse_response.errors
+        else:
+            uast = parse_response.uast
+        return uast, err
+    except Exception as e:
+        print("Exception on parse attempt: ", e)
+        return None, str(e)
 
 
 process_exploded_data()
