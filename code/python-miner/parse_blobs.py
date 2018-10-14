@@ -97,6 +97,8 @@ def process_exploded_data():
     blob_ids = sorted(blob_ids)
 
     for b in blob_ids:
+        #todo remove
+        print(b)
         try:
             blob = load_blob(b)
             blob_uast, err = parse_blob(blob)
