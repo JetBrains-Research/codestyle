@@ -157,9 +157,13 @@ def explode_repo():
         if processed_count >= limit:
             break
 
-    if df is not None:
-        if len(change_infos_chunk) > 0:
+    if len(change_infos_chunk) > 0:
+        if df is not None:
             df = df.append(DataFrame.from_records(change_infos_chunk))
+        else:
+            df = DataFrame.from_records(change_infos_chunk)
+
+    if df is not None:
         print(df.info(memory_usage='deep', verbose=False))
         df.to_csv(full_repo_data_file, index=False)
 
