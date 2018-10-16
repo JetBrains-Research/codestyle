@@ -1,15 +1,11 @@
 import os
-
-from git import Repo
-from pandas import DataFrame
-import pandas as pd
 import time
 
-repo_name = "intellij-community"
+import pandas as pd
+from git import Repo
+from pandas import DataFrame
 
-repo_path = "data/repos/{}".format(repo_name)
-blob_dir = "data/exploded/{}/blobs/".format(repo_name)
-os.makedirs(blob_dir, exist_ok=True)
+from path_util import *
 
 
 def is_valid(entry):
@@ -89,8 +85,8 @@ def process_commit(commit):
     return get_changes(commit, parent)
 
 
-def explode_repo(project_name, path):
-    repo = Repo(path)
+def explode_repo():
+    repo = Repo(repo_path)
 
     total_commits = 0
     for _ in repo.iter_commits():
@@ -99,19 +95,19 @@ def explode_repo(project_name, path):
             print("Counting commits: {}".format(total_commits))
 
     df = None
-
     processed_commits = set()
 
-    processed_commits_filename = "data/exploded/{}/processed_commits.csv".format(project_name)
-    temp_data_filename = "data/exploded/{}/infos_incomplete.csv".format(project_name)
-    if os.path.exists(temp_data_filename):
-        print("Found an incomplete dataset: {}".format(temp_data_filename))
-        df = pd.read_csv(temp_data_filename, index_col=None, na_values='')
+    os.makedirs(blob_dir, exist_ok=True)
+
+    if os.path.exists(incomplete_repo_data_file):
+        print("Found an incomplete dataset: {}".format(incomplete_repo_data_file))
+        df = pd.read_csv(incomplete_repo_data_file, index_col=None, na_values='')
         print(df.info(memory_usage='deep', verbose=False))
         entries = df.to_dict('records')
         for e in entries:
             cid = e['commit_id']
             processed_commits.add(cid)
+
         # Not all commits are present in the dataframe (some contain no interesting changes).
         # To speed up incremental processing, we keep all commit ids that we've encountered on full processing
         if os.path.exists(processed_commits_filename):
@@ -154,7 +150,7 @@ def explode_repo(project_name, path):
                 new_data = True
 
             if (df is not None) and new_data:
-                df.to_csv(temp_data_filename, index=False)
+                df.to_csv(incomplete_repo_data_file, index=False)
 
             change_infos_chunk = []
             print(df.info(memory_usage='deep', verbose=False))
@@ -165,7 +161,7 @@ def explode_repo(project_name, path):
         if len(change_infos_chunk) > 0:
             df = df.append(DataFrame.from_records(change_infos_chunk))
         print(df.info(memory_usage='deep', verbose=False))
-        df.to_csv("data/exploded/{}/infos_full.csv".format(project_name), index=False)
+        df.to_csv(full_repo_data_file, index=False)
 
     print("Dumping a list of {} already processed commits".format(len(processed_commits)))
     processed_commits_list = []
@@ -176,4 +172,4 @@ def explode_repo(project_name, path):
     commits_df.to_csv(processed_commits_filename, index=False)
 
 
-explode_repo(repo_name, repo_path)
+explode_repo()

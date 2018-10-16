@@ -6,13 +6,9 @@ import time
 import bblfsh
 import pandas as pd
 
+from path_util import *
+
 client = bblfsh.BblfshClient("0.0.0.0:9432")
-
-repo_name = "intellij-community"
-data_dir = "data/exploded/{}".format(repo_name)
-uast_dir = "data/exploded/{}/uast_zipped".format(repo_name)
-
-os.makedirs(uast_dir, exist_ok=True)
 
 
 def is_valid_blob_id(blob_id):
@@ -22,7 +18,7 @@ def is_valid_blob_id(blob_id):
 
 
 def extract_blob_ids():
-    df = pd.read_csv("{}/infos_full.csv".format(data_dir), index_col=None, na_values='')
+    df = pd.read_csv(full_repo_data_file, index_col=None, na_values='')
     entries = df.to_dict('records')
     print(df.info())
     blobs = []
@@ -30,7 +26,7 @@ def extract_blob_ids():
     def consume_blob_id(blob_id):
         if not is_valid_blob_id(blob_id):
             return
-        filename = "{}/blobs/{}".format(data_dir, blob_id)
+        filename = get_blob_path(blob_id)
         if not os.path.exists(filename):
             print("No file {} found for blob {}".format(filename, blob_id))
             return
@@ -46,7 +42,7 @@ def extract_blob_ids():
 
 
 def save_uast(blob_id, uast_tree):
-    filename = "{}/{}.uast".format(uast_dir, blob_id)
+    filename = get_uast_path(blob_id)
 
     tree = uast_tree.__getstate__()
     with gzip.open(filename, 'wb') as f:
@@ -54,7 +50,7 @@ def save_uast(blob_id, uast_tree):
 
 
 def open_uast(blob_id):
-    filename = "{}/{}.uast".format(uast_dir, blob_id)
+    filename = get_uast_path(blob_id)
     with gzip.open(filename, 'rb') as f:
         uast_str = pickle.load(f)
         uast = bblfsh.Node()
@@ -63,19 +59,19 @@ def open_uast(blob_id):
 
 
 def save_parse_status(parse_status, complete):
-    postfix = "_incomplete" if not complete else ""
-    filename = "{}/parse_status{}.csv".format(data_dir, postfix)
+    filename = complete_parse_status_filename if complete else incomplete_parse_status_filename
     pd.DataFrame.from_records(parse_status).to_csv(filename, index=False)
 
 
 def read_parse_status():
-    filename = "{}/parse_status_incomplete.csv".format(data_dir)
+    filename = incomplete_parse_status_filename
     if not os.path.exists(filename):
         return []
     return pd.read_csv(filename, index_col=None).to_dict('records')
 
 
 def process_exploded_data():
+    os.makedirs(uast_dir, exist_ok=True)
     blobs_list = extract_blob_ids()
     blob_ids = set(blobs_list)
     blobs_count = len(blob_ids)
@@ -97,7 +93,7 @@ def process_exploded_data():
     blob_ids = sorted(blob_ids)
 
     for b in blob_ids:
-        #todo remove
+        # todo remove
         print(b)
         try:
             blob = load_blob(b)
@@ -129,7 +125,7 @@ def process_exploded_data():
 
 
 def load_blob(blob_id):
-    filename = "{}/blobs/{}".format(data_dir, blob_id)
+    filename = get_blob_path(blob_id)
     if not os.path.exists(filename):
         return None
 
