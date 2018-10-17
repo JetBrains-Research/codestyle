@@ -29,7 +29,7 @@ class TestTreeDiffer(unittest.TestCase):
         methods = self.differ.get_methods(uast)
         assert len(methods) == 1
 
-    def test_single_method_name(self):
+    def test_single_method_name_inner_class(self):
         uast = self.get_tree("test_data/differ/SingleMethodInnerClass.java")
         methods = self.differ.get_methods(uast)
         assert self.differ.get_name(methods[0]) == "main"
