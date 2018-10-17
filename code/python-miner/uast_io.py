@@ -13,8 +13,8 @@ def save_parse_status(parse_status, complete):
     pd.DataFrame.from_records(parse_status).to_csv(filename, index=False)
 
 
-def read_parse_status():
-    filename = incomplete_parse_status_filename
+def read_parse_status(complete=False):
+    filename = complete_parse_status_filename if complete else incomplete_parse_status_filename
     if not os.path.exists(filename):
         return []
     return pd.read_csv(filename, index_col=None).to_dict('records')

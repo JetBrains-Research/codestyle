@@ -1,8 +1,20 @@
 import bblfsh
 
+
 class TreeDiffer:
     def get_method_pairs(self, uast_before, uast_after):
-        pass
+        methods_after = [{"name": self.get_name(m), "tree": m} for m in self.get_methods(uast_after)]
+        methods_before = [{"name": self.get_name(m), "tree": m} for m in self.get_methods(uast_before)]
+
+        pairs = []
+
+
+        for mb in methods_before:
+            for ma in methods_after:
+                if ma["name"] == mb["name"]:
+                    pairs.append({"before": mb, "after": ma})
+
+        return pairs
 
     def get_methods(self, uast):
         method_nodes = []
@@ -20,5 +32,3 @@ class TreeDiffer:
         if len(name_nodes) == 0:
             return ""
         return name_nodes[0].token
-
-
