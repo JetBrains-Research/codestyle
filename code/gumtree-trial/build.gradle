@@ -21,6 +21,12 @@ repositories {
 
 dependencies {
   compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  // https://mvnrepository.com/artifact/com.github.gumtreediff/core
+  compile group: 'com.github.gumtreediff', name: 'core', version: '2.1.0'
+  // https://mvnrepository.com/artifact/com.github.gumtreediff/client
+  compile group: 'com.github.gumtreediff', name: 'client', version: '2.1.0'
+  // https://mvnrepository.com/artifact/com.github.gumtreediff/gen.jdt
+  compile group: 'com.github.gumtreediff', name: 'gen.jdt', version: '2.1.0'
   testCompile "junit:junit:4.11"
   testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
 }
