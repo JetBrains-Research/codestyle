@@ -2,7 +2,6 @@ package codestyle.miner
 
 import com.github.gumtreediff.tree.ITree
 
-
 data class BlobId(val id: String)
 
 data class ChangeEntry(
@@ -24,3 +23,5 @@ data class ChangeEntry(
 data class MethodId(val enclosingClassName: String, val methodName: String, val argTypes: Set<String>)
 
 data class MethodInfo(val node: ITree, val id: MethodId)
+
+data class MethodMapping(val before: MethodInfo?, val after: MethodInfo?)
