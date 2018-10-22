@@ -43,7 +43,7 @@ class MethodMatchingTest {
 
         Assert.assertEquals(2, mappings.size)
 
-        val idPairs = mappings.map{Pair(it.before?.id, it.after?.id)}
+        val idPairs = mappings.map { Pair(it.before?.id, it.after?.id) }
 
         Assert.assertTrue(idPairs.contains(Pair(
                 MethodId("SingleFunction", "fun1", setOf("String[]", "int")),
@@ -55,6 +55,28 @@ class MethodMatchingTest {
                 MethodId("TwoFunctions", "fun2", setOf("int"))
         )))
 
-        Assert.assertEquals(mappings.first().after!!.id, MethodId("SingleFunction", "main", setOf("String[]")))
+    }
+
+    //Existing method removal
+    @Test
+    fun testMatching4() {
+        val fileBefore = "testData/differ/matching/4/Before.java"
+        val fileAfter = "testData/differ/matching/4/After.java"
+
+        val mappings = getMethodMappings(fileBefore, fileAfter)
+
+        Assert.assertEquals(2, mappings.size)
+
+        val idPairs = mappings.map { Pair(it.before?.id, it.after?.id) }
+
+        Assert.assertTrue(idPairs.contains(Pair(
+                MethodId("TwoFunctions", "fun1", setOf("String[]", "int")),
+                MethodId("SingleFunction", "fun1", setOf("String[]", "int"))
+        )))
+
+        Assert.assertTrue(idPairs.contains(Pair(
+                MethodId("TwoFunctions", "fun2", setOf("int")),
+                null
+        )))
     }
 }
