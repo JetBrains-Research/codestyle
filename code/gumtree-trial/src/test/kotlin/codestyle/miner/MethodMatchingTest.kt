@@ -31,4 +31,30 @@ class MethodMatchingTest {
         Assert.assertEquals(mappings.first().before!!.id, MethodId("SingleFunction", "fun", setOf("String[]", "int")))
         Assert.assertEquals(mappings.first().after!!.id, MethodId("SingleFunction", "main", setOf("String[]")))
     }
+
+
+    //New method addition
+    @Test
+    fun testMatching3() {
+        val fileBefore = "testData/differ/matching/3/Before.java"
+        val fileAfter = "testData/differ/matching/3/After.java"
+
+        val mappings = getMethodMappings(fileBefore, fileAfter)
+
+        Assert.assertEquals(2, mappings.size)
+
+        val idPairs = mappings.map{Pair(it.before?.id, it.after?.id)}
+
+        Assert.assertTrue(idPairs.contains(Pair(
+                MethodId("SingleFunction", "fun1", setOf("String[]", "int")),
+                MethodId("TwoFunctions", "fun1", setOf("String[]", "int"))
+        )))
+
+        Assert.assertTrue(idPairs.contains(Pair(
+                null,
+                MethodId("TwoFunctions", "fun2", setOf("int"))
+        )))
+
+        Assert.assertEquals(mappings.first().after!!.id, MethodId("SingleFunction", "main", setOf("String[]")))
+    }
 }
