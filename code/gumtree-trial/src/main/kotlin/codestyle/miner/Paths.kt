@@ -2,11 +2,8 @@ package codestyle.miner
 
 import com.github.gumtreediff.tree.ITree
 
-val MIN_HEIGHT_KEY = "minHeight"
-val MAX_HEIGHT_KEY = "maxHeight"
-val MIN_LEAF_INDEX_KEY = "minLeafIndex"
-val MAX_LEAF_INDEX_KEY = "maxLeafIndex"
-val PATH_PIECES_KEY = "pathPieces"
+const val LEAF_INDEX_KEY = "leafIndex"
+const val PATH_PIECES_KEY = "pathPieces"
 
 fun ITree.setIntValue(key: String, value: Int) {
     this.setMetadata(key, value)
@@ -22,47 +19,57 @@ fun ITree.setPathPieces(pathPieces: Collection<List<ITree>>) {
 
 fun ITree.getPathPieces(): Collection<List<ITree>> = this.getMetadata(PATH_PIECES_KEY) as Collection<List<ITree>>
 
-fun ITree.setMinHeight(value: Int) = setIntValue(MIN_HEIGHT_KEY, value)
-fun ITree.setMaxHeight(value: Int) = setIntValue(MAX_HEIGHT_KEY, value)
-fun ITree.setMinLeafIndex(value: Int) = setIntValue(MIN_LEAF_INDEX_KEY, value)
-fun ITree.setMaxLeafIndex(value: Int) = setIntValue(MAX_LEAF_INDEX_KEY, value)
+fun ITree.setLeafIndex(value: Int) = setIntValue(LEAF_INDEX_KEY, value)
 
-fun ITree.getMinHeight() = getIntValue(MIN_HEIGHT_KEY)
-fun ITree.getMaxHeight() = getIntValue(MAX_HEIGHT_KEY)
-fun ITree.getMinLeafIndex() = getIntValue(MIN_LEAF_INDEX_KEY)
-fun ITree.getMaxLeafIndex() = getIntValue(MAX_LEAF_INDEX_KEY)
+fun ITree.getMinLeafIndex() = getIntValue(LEAF_INDEX_KEY)
 
-class Path(val firstPiece: List<ITree>, val secondPiece: List<ITree>){
-
+class Path(val upwardPiece: List<ITree>, val downwardPiece: List<ITree>) {
+    init {
+        println("\nUp:   ${upwardPiece.map { it.toShortString() }}")
+        println("Down: ${downwardPiece.reversed().map { it.toShortString() }}")
+    }
 }
 
+fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>, maxLength: Int, maxWidth: Int): Collection<Path> {
+    val paths: MutableCollection<Path> = ArrayList()
+    val sortedPieces = pathPieces.sortedBy { (it[0].getMinLeafIndex()) }
+    sortedPieces.forEachIndexed { index, upPiece ->
+        for (i in (index + 1 until sortedPieces.size)) {
+            val downPiece = sortedPieces[i]
+            val length = upPiece.size + downPiece.size - 1 // -1 as the top node is present in both pieces
+            val width = downPiece[0].getMinLeafIndex() - upPiece[0].getMinLeafIndex()
+            if (length <= maxLength && width <= maxWidth) {
+                paths.add(Path(upPiece, downPiece))
+            }
+        }
+    }
+    return paths
+}
 
+fun retrievePaths(root: ITree) = retrievePaths(root, Int.MAX_VALUE, Int.MAX_VALUE)
 
-fun traverseTree(root: ITree) {
+fun retrievePaths(root: ITree, maxLength: Int, maxWidth: Int): Collection<Path> {
     val iterator = root.postOrder()
     var currentLeafIndex = 0
+    val paths: MutableCollection<Path> = ArrayList()
     iterator.forEach {
         if (it.isLeaf) {
             val leafIndex = currentLeafIndex++
-            it.setMinLeafIndex(leafIndex)
-            it.setMaxLeafIndex(leafIndex)
-            it.setMinHeight(0)
-            it.setMaxHeight(0)
-            it.setPathPieces(listOf(listOf(it)))
+            it.setLeafIndex(leafIndex)
         } else {
-            it.setMinLeafIndex(it.children.map { child -> child.getMinLeafIndex() }.min() ?: -1)
-            it.setMaxLeafIndex(it.children.map { child -> child.getMaxLeafIndex() }.max() ?: -1)
-            it.setMinHeight((it.children.map { child -> child.getMinHeight() }.min() ?: -2) + 1)
-            it.setMaxHeight((it.children.map { child -> child.getMaxHeight() }.max() ?: -2) + 1)
 
             val childPathPieces = it.children.map { it.getPathPieces() }.flatten()
-            val currentNodePathPieces = childPathPieces.map { l -> l + it }
 
+            val currentNodePathPieces = childPathPieces
+                    // Filtering out the paths that are already too long.
+                    // -2 represent the current node and its possible immediate leaf child.
+                    .filter { pathPiece -> pathPiece.size <= maxLength - 2 }
+                    // Appending the current node to every piece
+                    .map { l -> l + it }
 
+            it.setPathPieces(currentNodePathPieces)
+            paths.addAll(getPathsForCurrentNode(currentNodePathPieces, maxLength, maxWidth))
         }
-
-
     }
-
-
+    return paths
 }
