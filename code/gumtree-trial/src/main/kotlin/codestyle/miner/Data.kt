@@ -24,4 +24,12 @@ data class MethodId(val enclosingClassName: String, val methodName: String, val 
 
 data class MethodInfo(val node: ITree, val id: MethodId)
 
-data class MethodMapping(val before: MethodInfo?, val after: MethodInfo?)
+fun isChanged(before: MethodInfo?, after: MethodInfo?): Boolean {
+    if (before == null && after == null) return true
+    if (before == null || after == null) return false
+    return before.node.hash != after.node.hash
+}
+
+class MethodMapping(val before: MethodInfo?, val after: MethodInfo?) {
+    val isChanged = isChanged(before, after)
+}

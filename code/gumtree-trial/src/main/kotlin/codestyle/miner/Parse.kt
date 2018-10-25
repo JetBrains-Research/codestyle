@@ -4,8 +4,9 @@ import com.github.gumtreediff.gen.jdt.JdtTreeGenerator
 import com.github.gumtreediff.tree.ITree
 import com.github.gumtreediff.tree.TreeContext
 
-fun readAndParseBlob(id: String): TreeContext {
-    val file = "../python-miner/data/exploded/intellij-community/blobs/$id"
+fun readAndParseBlob(blobId: BlobId?): TreeContext? {
+    if (blobId == null) return null
+    val file = "../python-miner/data/exploded/intellij-community/blobs/${blobId.id}"
     return parse(file)
 }
 
@@ -52,3 +53,4 @@ fun getMethodInfos(treeContext: TreeContext): Collection<MethodInfo> {
             .filter { treeContext.getTypeLabel(it.type) == "MethodDeclaration" }
     return methodNodes.map { getMethodInfo(it, treeContext) }
 }
+

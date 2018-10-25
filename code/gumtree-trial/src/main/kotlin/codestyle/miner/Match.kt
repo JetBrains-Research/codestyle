@@ -4,7 +4,21 @@ import com.github.gumtreediff.client.Run
 import com.github.gumtreediff.matchers.Matchers
 import com.github.gumtreediff.tree.TreeContext
 
-fun getMethodMappings(treeBefore: TreeContext, treeAfter: TreeContext): Collection<MethodMapping> {
+data class MappingContext(val treeContextBefore: TreeContext?, val treeContextAfter: TreeContext?, val mappings: Collection<MethodMapping>)
+
+fun getMappingContext(treeBefore: TreeContext?, treeAfter: TreeContext?): MappingContext {
+    if (treeBefore == null && treeAfter == null) {
+        return MappingContext(null, null, emptyList())
+    }
+
+    if (treeBefore == null) {
+        return MappingContext(null, treeAfter, getMethodInfos(treeAfter!!).map { MethodMapping(null, it) })
+    }
+
+    if (treeAfter == null) {
+        return MappingContext(treeBefore, null, getMethodInfos(treeBefore).map { MethodMapping(it, null) })
+    }
+
     val infosBefore = getMethodInfos(treeBefore)
     val infosAfter = getMethodInfos(treeAfter)
 
@@ -38,9 +52,13 @@ fun getMethodMappings(treeBefore: TreeContext, treeAfter: TreeContext): Collecti
         }
     }
 
-    return mappings
+    return MappingContext(treeBefore, treeAfter, mappings)
 }
 
-fun getMethodMappings(filenameBefore: String, filenameAfter: String): Collection<MethodMapping> {
-    return getMethodMappings(parse(filenameBefore), parse(filenameAfter))
+fun getMappingContext(filenameBefore: String, filenameAfter: String): MappingContext {
+    return getMappingContext(parse(filenameBefore), parse(filenameAfter))
+}
+
+fun getMappingContext(blobIdBefore: BlobId?, blobIdAfter: BlobId?): MappingContext {
+    return getMappingContext(readAndParseBlob(blobIdBefore), readAndParseBlob(blobIdAfter))
 }

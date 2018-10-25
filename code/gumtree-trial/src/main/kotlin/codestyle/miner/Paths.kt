@@ -1,6 +1,7 @@
 package codestyle.miner
 
 import com.github.gumtreediff.tree.ITree
+import com.github.gumtreediff.tree.TreeContext
 
 const val LEAF_INDEX_KEY = "leafIndex"
 const val PATH_PIECES_KEY = "pathPieces"
@@ -23,15 +24,12 @@ fun ITree.setLeafIndex(value: Int) = setIntValue(LEAF_INDEX_KEY, value)
 
 fun ITree.getMinLeafIndex() = getIntValue(LEAF_INDEX_KEY)
 
-class Path(val upwardPiece: List<ITree>, val downwardPiece: List<ITree>) {
-    init {
-        println("\nUp:   ${upwardPiece.map { it.toShortString() }}")
-        println("Down: ${downwardPiece.reversed().map { it.toShortString() }}")
-    }
-}
 
-fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>, maxLength: Int, maxWidth: Int): Collection<Path> {
-    val paths: MutableCollection<Path> = ArrayList()
+fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>,
+                           maxLength: Int, maxWidth: Int,
+                           treeContext: TreeContext,
+                           pathStorage: PathStorage): Collection<PathContext> {
+    val paths: MutableCollection<PathContext> = ArrayList()
     val sortedPieces = pathPieces.sortedBy { (it[0].getMinLeafIndex()) }
     sortedPieces.forEachIndexed { index, upPiece ->
         for (i in (index + 1 until sortedPieces.size)) {
@@ -39,23 +37,24 @@ fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>, maxLength: Int, 
             val length = upPiece.size + downPiece.size - 1 // -1 as the top node is present in both pieces
             val width = downPiece[0].getMinLeafIndex() - upPiece[0].getMinLeafIndex()
             if (length <= maxLength && width <= maxWidth) {
-                paths.add(Path(upPiece, downPiece))
+                paths.add(pathStorage.store(upPiece, downPiece, treeContext))
             }
         }
     }
     return paths
 }
 
-fun retrievePaths(root: ITree) = retrievePaths(root, Int.MAX_VALUE, Int.MAX_VALUE)
+fun retrievePaths(treeContext: TreeContext, startNode: ITree, pathStorage: PathStorage) = retrievePaths(treeContext, startNode, pathStorage, Int.MAX_VALUE, Int.MAX_VALUE)
 
-fun retrievePaths(root: ITree, maxLength: Int, maxWidth: Int): Collection<Path> {
-    val iterator = root.postOrder()
+fun retrievePaths(treeContext: TreeContext, startNode: ITree, pathStorage: PathStorage, maxLength: Int, maxWidth: Int): Collection<PathContext> {
+    val iterator = startNode.postOrder()
     var currentLeafIndex = 0
-    val paths: MutableCollection<Path> = ArrayList()
+    val paths: MutableCollection<PathContext> = ArrayList()
     iterator.forEach {
         if (it.isLeaf) {
             val leafIndex = currentLeafIndex++
             it.setLeafIndex(leafIndex)
+            it.setPathPieces(listOf(listOf(it)))
         } else {
 
             val childPathPieces = it.children.map { it.getPathPieces() }.flatten()
@@ -68,7 +67,7 @@ fun retrievePaths(root: ITree, maxLength: Int, maxWidth: Int): Collection<Path> 
                     .map { l -> l + it }
 
             it.setPathPieces(currentNodePathPieces)
-            paths.addAll(getPathsForCurrentNode(currentNodePathPieces, maxLength, maxWidth))
+            paths.addAll(getPathsForCurrentNode(currentNodePathPieces, maxLength, maxWidth, treeContext, pathStorage))
         }
     }
     return paths
