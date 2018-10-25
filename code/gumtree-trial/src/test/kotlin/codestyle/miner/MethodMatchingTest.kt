@@ -26,6 +26,9 @@ class MethodMatchingTest {
         val context = getMappingContext(fileBefore, fileAfter)
 
         Assert.assertEquals(1, context.mappings.size)
+
+        Assert.assertEquals(true, context.mappings.first().isChanged)
+
         Assert.assertNotNull(context.mappings.first().before)
         Assert.assertNotNull(context.mappings.first().after)
         Assert.assertEquals(context.mappings.first().before!!.id, MethodId("SingleFunction", "fun", setOf("String[]", "int")))
@@ -78,5 +81,18 @@ class MethodMatchingTest {
                 MethodId("TwoFunctions", "fun2", setOf("int")),
                 null
         )))
+    }
+
+    //Equal nodes
+    @Test
+    fun testMatching5() {
+        val fileBefore = "testData/differ/matching/5/Before.java"
+        val fileAfter = "testData/differ/matching/5/After.java"
+
+        val context = getMappingContext(fileBefore, fileAfter)
+
+        Assert.assertEquals(1, context.mappings.size)
+
+        Assert.assertEquals(false, context.mappings.first().isChanged)
     }
 }
