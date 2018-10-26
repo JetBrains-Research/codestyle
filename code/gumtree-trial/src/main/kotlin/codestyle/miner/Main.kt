@@ -91,7 +91,7 @@ fun processRepositoryData(): List<String> {
     processEntries(entries, pathStorage)
 
     val elapsed = System.currentTimeMillis() - startTime
-    println("Processed ${entries.size} entries in ${elapsed / 1000} seconds (${1000.0 * lines.size / elapsed} entries/s)")
+    println("Processed ${entries.size} entries in ${elapsed / 1000} seconds (${1000.0 * entries.size / elapsed} entries/s)")
     return lines
 }
 
