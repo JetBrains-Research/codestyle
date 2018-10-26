@@ -31,7 +31,7 @@ data class MethodChangeInfo(val methodIdBefore: MethodId?, val methodIdAfter: Me
                             val pathsCountBefore: Int, val pathsCountAfter: Int,
                             val pathsBefore: String, val pathsAfter: String)
 
-data class FileChangeInfo(val changeEntryId: Int, val methodChanges: List<MethodChangeInfo>)
+data class FileChangeInfo(val changeEntryId: Int, val authorName: String, val authorEmail: String, val methodChanges: List<MethodChangeInfo>)
 
 data class MethodId(val enclosingClassName: String, val methodName: String, val argTypes: Set<String>)
 
@@ -117,13 +117,13 @@ fun dumpPathStorage(storage: PathStorage) {
 }
 
 fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, methodIdStorage: IncrementalIdStorage<MethodId>) {
-    val header = "changeId,methodBeforeId,methodAfterId,pathsCountBefore,pathsCountAfter,pathsBefore,pathsAfter"
+    val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,pathsCountBefore,pathsCountAfter,pathsBefore,pathsAfter"
     val lines = mutableListOf(header)
     fileChanges.forEach { fileChange ->
         fileChange.methodChanges.forEach {
             val idBefore = if (it.methodIdBefore == null) -1 else methodIdStorage.record(it.methodIdBefore)
             val idAfter = if (it.methodIdAfter == null) -1 else methodIdStorage.record(it.methodIdAfter)
-            val line = "${fileChange.changeEntryId},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
+            val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
             lines.add(line)
         }
     }

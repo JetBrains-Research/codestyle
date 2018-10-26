@@ -143,7 +143,7 @@ fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage): FileChange
         methodChangeInfos.add(methodChangeData)
     }
 
-    return FileChangeInfo(entry.id, methodChangeInfos)
+    return FileChangeInfo(entry.id, entry.authorName, entry.authorEmail, methodChangeInfos)
 }
 
 fun saveInfosToJson(filename: String, infos: List<FileChangeInfo>) {
