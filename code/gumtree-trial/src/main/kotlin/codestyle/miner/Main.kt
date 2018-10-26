@@ -98,7 +98,6 @@ fun processRepositoryData() {
     var counter = 0
     fun getId(): Int = counter++
     val entries = lines.drop(1)
-            .take(100_000)
             .map { parseChangeEntry(getId(), it, settings) }
 
     val infos = processEntries(entries, pathStorage)
