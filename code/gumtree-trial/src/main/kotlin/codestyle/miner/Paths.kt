@@ -28,7 +28,8 @@ fun ITree.getMinLeafIndex() = getIntValue(LEAF_INDEX_KEY)
 fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>,
                            maxLength: Int, maxWidth: Int,
                            treeContext: TreeContext,
-                           pathStorage: PathStorage): Collection<PathContext> {
+                           pathStorage: PathStorage,
+                           matchedPieces: MutableSet<Pair<List<ITree>, List<ITree>>>): Collection<PathContext> {
     val paths: MutableCollection<PathContext> = ArrayList()
     val sortedPieces = pathPieces.sortedBy { (it[0].getMinLeafIndex()) }
     sortedPieces.forEachIndexed { index, upPiece ->
@@ -36,8 +37,10 @@ fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>,
             val downPiece = sortedPieces[i]
             val length = upPiece.size + downPiece.size - 1 // -1 as the top node is present in both pieces
             val width = downPiece[0].getMinLeafIndex() - upPiece[0].getMinLeafIndex()
-            if (length <= maxLength && width <= maxWidth) {
+            val piecePair = Pair(upPiece, downPiece)
+            if (length <= maxLength && width <= maxWidth && piecePair !in matchedPieces) {
                 paths.add(pathStorage.store(upPiece, downPiece, treeContext))
+                matchedPieces.add(piecePair)
             }
         }
     }
@@ -50,6 +53,7 @@ fun retrievePaths(treeContext: TreeContext, startNode: ITree, pathStorage: PathS
     val iterator = startNode.postOrder()
     var currentLeafIndex = 0
     val paths: MutableCollection<PathContext> = ArrayList()
+    val matchedPieces: MutableSet<Pair<List<ITree>, List<ITree>>> = HashSet()
     iterator.forEach {
         if (it.isLeaf) {
             val leafIndex = currentLeafIndex++
@@ -67,7 +71,7 @@ fun retrievePaths(treeContext: TreeContext, startNode: ITree, pathStorage: PathS
                     .map { l -> l + it }
 
             it.setPathPieces(currentNodePathPieces)
-            paths.addAll(getPathsForCurrentNode(currentNodePathPieces, maxLength, maxWidth, treeContext, pathStorage))
+            paths.addAll(getPathsForCurrentNode(currentNodePathPieces, maxLength, maxWidth, treeContext, pathStorage, matchedPieces))
         }
     }
     return paths
