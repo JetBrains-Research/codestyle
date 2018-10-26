@@ -1,9 +1,11 @@
 package codestyle.miner
 
+import com.github.gumtreediff.client.Run
 import com.github.gumtreediff.tree.ITree
 import com.github.gumtreediff.tree.TreeContext
 import com.google.common.io.Files
 import java.io.File
+import kotlin.concurrent.thread
 
 fun main(args: Array<String>) {
     processRepositoryData()
@@ -50,23 +52,46 @@ private fun parseChangeEntry(csvLine: String, csvSettings: CsvSettings): ChangeE
 }
 
 
+fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage) {
+    val nCores = Runtime.getRuntime().availableProcessors()
+    val nchunks = nCores - 1
+    val chunkSize = (entries.size / nchunks) + 1
+    println("have $nCores cores, running $nchunks threads processing $chunkSize entries each")
+
+    val threads: MutableCollection<Thread> = HashSet()
+
+    entries.chunked(chunkSize).forEach { chunk ->
+        val currentThread = thread {
+            chunk.forEach {
+                processChangeEntry(it, pathStorage)
+            }
+        }
+        threads.add(currentThread)
+    }
+
+    threads.forEach {
+        it.join()
+    }
+}
+
 fun processRepositoryData(): List<String> {
     val blobListFile = "../python-miner/data/exploded/intellij-community/infos_full.csv"
     val lines = Files.readLines(File(blobListFile), Charsets.UTF_8)
     val settings = CsvSettings(lines.first())
     println("${lines.size} entries read")
 
-    var pathsCount = 0L
+    Run.initGenerators()
+
+    val startTime = System.currentTimeMillis()
 
     val pathStorage = PathStorage()
 
-    lines.drop(1).map { parseChangeEntry(it, settings) }.forEach {
-        val paths = processChangeEntry(it, pathStorage)
-        pathsCount += paths.size
-    }
+    val entries = lines.drop(1).map { parseChangeEntry(it, settings) }
 
-    println("Extracted a total of $pathsCount paths")
+    processEntries(entries, pathStorage)
 
+    val elapsed = System.currentTimeMillis() - startTime
+    println("Processed ${lines.size} entries in ${elapsed / 1000} seconds (${1000.0 * lines.size / elapsed} entries/s)")
     return lines
 }
 
@@ -98,7 +123,7 @@ fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage): Collection
         val pathsBefore = getMethodPaths(treeBefore, mappingContext.treeContextBefore)
         val pathsAfter = getMethodPaths(treeAfter, mappingContext.treeContextAfter)
 
-        println("Before: ${pathsBefore.size} paths, after: ${pathsAfter.size}")
+//        println("Before: ${pathsBefore.size} paths, after: ${pathsAfter.size}")
     }
 
     return emptyList()

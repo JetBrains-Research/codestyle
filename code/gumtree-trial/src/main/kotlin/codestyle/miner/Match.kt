@@ -22,7 +22,6 @@ fun getMappingContext(treeBefore: TreeContext?, treeAfter: TreeContext?): Mappin
     val infosBefore = getMethodInfos(treeBefore)
     val infosAfter = getMethodInfos(treeAfter)
 
-    Run.initGenerators()
 
     val matcher = Matchers.getInstance().getMatcher(treeBefore.root, treeAfter.root)
     matcher.match()

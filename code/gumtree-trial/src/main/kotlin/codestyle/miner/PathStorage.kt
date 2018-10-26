@@ -20,6 +20,7 @@ class IncrementalIdStorage<T> {
         return keyCounter++
     }
 
+    @Synchronized
     fun record(item: T): Long {
         recordCounter++
         return map[item] ?: putAndIncrement(item)
