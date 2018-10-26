@@ -97,8 +97,7 @@ fun processRepositoryData() {
 
     var counter = 0
     fun getId(): Int = counter++
-
-    val entries = lines.drop(1).take(100_000).map { parseChangeEntry(getId(), it, settings) }
+    val entries = lines.drop(1).map { parseChangeEntry(getId(), it, settings) }
 
     val infos = processEntries(entries, pathStorage)
 
@@ -126,7 +125,6 @@ fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage): FileChange
         if (node == null || context == null) return emptyList()
         return retrievePaths(context, node, pathStorage, 10, 3)
     }
-
 
     val methodChangeInfos: MutableList<MethodChangeInfo> = ArrayList()
 
