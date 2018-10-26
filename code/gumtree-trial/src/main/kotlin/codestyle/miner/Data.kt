@@ -22,7 +22,7 @@ data class ChangeEntry(
 )
 
 fun ChangeEntry.toCsvLine(): String {
-    return "$id,$commitId,$authorName,$authorEmail,$committerName,$committerEmail,$authorTime,$committerTime,$changeType,$oldContentId,$newContentId,$oldPath,$newPath"
+    return "$id,$commitId,$authorName,$authorEmail,$committerName,$committerEmail,$authorTime,$committerTime,$changeType,${oldContentId?.id},${newContentId?.id},$oldPath,$newPath"
 }
 
 const val CHANGE_ENTRY_CSV_HEADER = "id,commitId,authorName,authorEmail,committerName,committerEmail,authorTime,committerTime,changeType,oldContentId,newContentId,oldPath,newPath"
@@ -137,7 +137,10 @@ fun saveChangeEntries(filename: String, changeEntries: List<ChangeEntry>) {
 }
 
 fun writeLinesToFile(filename: String, lines: List<String>) {
-    File(filename).printWriter().use { out ->
+    val dirName = "out"
+    val dir = File(dirName)
+    dir.mkdirs()
+    File("$dirName/$filename").printWriter().use { out ->
         lines.forEach { out.println(it) }
     }
 }
