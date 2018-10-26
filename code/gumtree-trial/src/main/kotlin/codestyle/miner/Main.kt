@@ -32,10 +32,11 @@ private fun createBlobId(idString: String): BlobId? {
     return BlobId(idString)
 }
 
-private fun parseChangeEntry(csvLine: String, csvSettings: CsvSettings): ChangeEntry {
+private fun parseChangeEntry(id: Int, csvLine: String, csvSettings: CsvSettings): ChangeEntry {
     val values = csvLine.split(',')
 
     return ChangeEntry(
+            id,
             values[csvSettings.getKeyIndex("commit_id")],
             values[csvSettings.getKeyIndex("author_name")],
             values[csvSettings.getKeyIndex("author_email")],
@@ -86,7 +87,10 @@ fun processRepositoryData(): List<String> {
 
     val pathStorage = PathStorage()
 
-    val entries = lines.drop(1).take(100_000).map { parseChangeEntry(it, settings) }
+    var counter = 0
+    fun getId(): Int = counter++
+
+    val entries = lines.drop(1).take(100_000).map { parseChangeEntry(getId(), it, settings) }
 
     processEntries(entries, pathStorage)
 

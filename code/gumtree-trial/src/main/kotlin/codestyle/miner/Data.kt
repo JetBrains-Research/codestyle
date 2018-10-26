@@ -5,6 +5,7 @@ import com.github.gumtreediff.tree.ITree
 data class BlobId(val id: String)
 
 data class ChangeEntry(
+        val id: Int,
         val commitId: String,
         val authorName: String,
         val authorEmail: String,
