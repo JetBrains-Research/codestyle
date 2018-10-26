@@ -97,12 +97,13 @@ fun processRepositoryData() {
 
     var counter = 0
     fun getId(): Int = counter++
-    val entries = lines.drop(1).map { parseChangeEntry(getId(), it, settings) }
+    val entries = lines.drop(1)
+            .take(100_000)
+            .map { parseChangeEntry(getId(), it, settings) }
 
     val infos = processEntries(entries, pathStorage)
 
     dumpData(entries, infos, pathStorage)
-
 
     val elapsed = System.currentTimeMillis() - startTime
     println("Processed ${entries.size} entries in ${elapsed / 1000} seconds (${1000.0 * entries.size / elapsed} entries/s)")
