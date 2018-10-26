@@ -86,7 +86,7 @@ fun processRepositoryData(): List<String> {
 
     val pathStorage = PathStorage()
 
-    val entries = lines.drop(1).map { parseChangeEntry(it, settings) }
+    val entries = lines.drop(1).take(10_000).map { parseChangeEntry(it, settings) }
 
     processEntries(entries, pathStorage)
 
