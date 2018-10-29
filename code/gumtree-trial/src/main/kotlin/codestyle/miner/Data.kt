@@ -54,7 +54,7 @@ fun dumpData(entries: List<ChangeEntry>, changes: List<FileChangeInfo>, pathStor
 }
 
 fun saveFileChanges(changes: List<FileChangeInfo>) {
-    val chunkSize = 100_000
+    val chunkSize = 10_000
     val chunkedChanges = changes.chunked(chunkSize)
     val methodIdStorage: IncrementalIdStorage<MethodId> = IncrementalIdStorage()
     chunkedChanges.forEachIndexed { i, list ->
@@ -118,16 +118,21 @@ fun dumpPathStorage(storage: PathStorage) {
 
 fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, methodIdStorage: IncrementalIdStorage<MethodId>) {
     val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,pathsCountBefore,pathsCountAfter,pathsBefore,pathsAfter"
-    val lines = mutableListOf(header)
-    fileChanges.forEach { fileChange ->
-        fileChange.methodChanges.forEach {
-            val idBefore = if (it.methodIdBefore == null) -1 else methodIdStorage.record(it.methodIdBefore)
-            val idAfter = if (it.methodIdAfter == null) -1 else methodIdStorage.record(it.methodIdAfter)
-            val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
-            lines.add(line)
+
+    val dirName = "out"
+    val dir = File(dirName)
+    dir.mkdirs()
+    File("$dirName/$filename").printWriter().use { out ->
+        out.println(header)
+        fileChanges.forEach { fileChange ->
+            fileChange.methodChanges.forEach {
+                val idBefore = if (it.methodIdBefore == null) -1 else methodIdStorage.record(it.methodIdBefore)
+                val idAfter = if (it.methodIdAfter == null) -1 else methodIdStorage.record(it.methodIdAfter)
+                val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
+                out.println(line)
+            }
         }
     }
-    writeLinesToFile(filename, lines)
 }
 
 fun saveChangeEntries(filename: String, changeEntries: List<ChangeEntry>) {
