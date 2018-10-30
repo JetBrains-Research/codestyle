@@ -83,7 +83,7 @@ fun dumpStringIdStorage(storage: IncrementalIdStorage<String>, filename: String)
     storage.map.forEach {
         val id = it.value
         val stringValue = it.key
-        lines.add("$id,$stringValue")
+        lines.add("$id,${stringValue.replace(',',' ')}")
     }
     writeLinesToFile(filename, lines)
 }
