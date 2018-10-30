@@ -71,7 +71,7 @@ fun dumpMethodIdStorage(storage: IncrementalIdStorage<MethodId>, filename: Strin
     storage.map.forEach {
         val id = it.value
         val methodId = it.key
-        val line = "$id,${methodId.enclosingClassName},${methodId.methodName},${methodId.argTypes}"
+        val line = "$id,${methodId.enclosingClassName},${methodId.methodName},${methodId.argTypes.joinToString(";")}"
         lines.add(line)
     }
     writeLinesToFile(filename, lines)
