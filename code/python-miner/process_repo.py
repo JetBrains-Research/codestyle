@@ -127,7 +127,7 @@ def explode_repo():
     prev_time = time.time()
     change_infos_chunk = []
     for c in repo.iter_commits():
-        if (str(c) in processed_commits):
+        if str(c) in processed_commits:
             continue
 
         change_infos_chunk += process_commit(c)
