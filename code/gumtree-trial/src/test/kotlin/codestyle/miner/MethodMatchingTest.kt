@@ -14,8 +14,8 @@ class MethodMatchingTest {
         Assert.assertEquals(1, context.mappings.size)
         Assert.assertNotNull(context.mappings.first().before)
         Assert.assertNotNull(context.mappings.first().after)
-        Assert.assertEquals(context.mappings.first().before!!.id, MethodId("SingleFunction", "main", listOf("String[]")))
-        Assert.assertEquals(context.mappings.first().after!!.id, MethodId("SingleFunction", "main", listOf("String[]")))
+        Assert.assertEquals(context.mappings.first().before!!.id, MethodId("SingleFunction", ClassType.CLASS, "main", listOf("String[]")))
+        Assert.assertEquals(context.mappings.first().after!!.id, MethodId("SingleFunction", ClassType.CLASS,"main", listOf("String[]")))
     }
 
     @Test
@@ -31,8 +31,8 @@ class MethodMatchingTest {
 
         Assert.assertNotNull(context.mappings.first().before)
         Assert.assertNotNull(context.mappings.first().after)
-        Assert.assertEquals(context.mappings.first().before!!.id, MethodId("SingleFunction", "fun", listOf("String[]", "int")))
-        Assert.assertEquals(context.mappings.first().after!!.id, MethodId("SingleFunction", "main", listOf("String[]")))
+        Assert.assertEquals(context.mappings.first().before!!.id, MethodId("SingleFunction", ClassType.CLASS, "fun", listOf("String[]", "int")))
+        Assert.assertEquals(context.mappings.first().after!!.id, MethodId("SingleFunction", ClassType.CLASS, "main", listOf("String[]")))
     }
 
 
@@ -49,13 +49,13 @@ class MethodMatchingTest {
         val idPairs = context.mappings.map { Pair(it.before?.id, it.after?.id) }
 
         Assert.assertTrue(idPairs.contains(Pair(
-                MethodId("SingleFunction", "fun1", listOf("String[]", "int")),
-                MethodId("TwoFunctions", "fun1", listOf("String[]", "int"))
+                MethodId("SingleFunction", ClassType.CLASS, "fun1", listOf("String[]", "int")),
+                MethodId("TwoFunctions", ClassType.CLASS,"fun1", listOf("String[]", "int"))
         )))
 
         Assert.assertTrue(idPairs.contains(Pair(
                 null,
-                MethodId("TwoFunctions", "fun2", listOf("int"))
+                MethodId("TwoFunctions", ClassType.CLASS,"fun2", listOf("int"))
         )))
 
     }
@@ -73,12 +73,12 @@ class MethodMatchingTest {
         val idPairs = context.mappings.map { Pair(it.before?.id, it.after?.id) }
 
         Assert.assertTrue(idPairs.contains(Pair(
-                MethodId("TwoFunctions", "fun1", listOf("String[]", "int")),
-                MethodId("SingleFunction", "fun1", listOf("String[]", "int"))
+                MethodId("TwoFunctions",  ClassType.CLASS,"fun1", listOf("String[]", "int")),
+                MethodId("SingleFunction", ClassType.CLASS,"fun1", listOf("String[]", "int"))
         )))
 
         Assert.assertTrue(idPairs.contains(Pair(
-                MethodId("TwoFunctions", "fun2", listOf("int")),
+                MethodId("TwoFunctions", ClassType.CLASS,"fun2", listOf("int")),
                 null
         )))
     }

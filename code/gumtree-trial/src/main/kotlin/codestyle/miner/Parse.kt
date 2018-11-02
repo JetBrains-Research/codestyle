@@ -20,6 +20,10 @@ fun getEnclosingClassName(methodNode: ITree, context: TreeContext): String {
     return nameNode?.label ?: ""
 }
 
+fun getEnclosingClassType(methodNode: ITree, context: TreeContext): ClassType {
+    return ClassType.CLASS
+}
+
 fun getMethodName(methodNode: ITree, context: TreeContext): String {
     val nameNode = methodNode.children.firstOrNull { context.getTypeLabel(it.type) == "SimpleName" }
     return nameNode?.label ?: ""
@@ -39,6 +43,7 @@ fun getParameterTypes(methodNode: ITree, context: TreeContext): List<String> {
 fun getMethodId(methodNode: ITree, context: TreeContext): MethodId {
     return MethodId(
             getEnclosingClassName(methodNode, context),
+            getEnclosingClassType(methodNode, context),
             getMethodName(methodNode, context),
             getParameterTypes(methodNode, context)
     )
