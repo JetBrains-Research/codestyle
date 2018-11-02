@@ -25,8 +25,8 @@ fun getMethodName(methodNode: ITree, context: TreeContext): String {
     return nameNode?.label ?: ""
 }
 
-fun getParameterTypes(methodNode: ITree, context: TreeContext): Set<String> {
-    val result: MutableSet<String> = HashSet()
+fun getParameterTypes(methodNode: ITree, context: TreeContext): List<String> {
+    val result: MutableList<String> = ArrayList()
     val argDeclarationNodes = methodNode.children
             .filter { context.getTypeLabel(it.type) == "SingleVariableDeclaration" }
     argDeclarationNodes.forEach {

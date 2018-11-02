@@ -33,7 +33,7 @@ data class MethodChangeInfo(val methodIdBefore: MethodId?, val methodIdAfter: Me
 
 data class FileChangeInfo(val changeEntryId: Int, val authorName: String, val authorEmail: String, val methodChanges: List<MethodChangeInfo>)
 
-data class MethodId(val enclosingClassName: String, val methodName: String, val argTypes: Set<String>)
+data class MethodId(val enclosingClassName: String, val methodName: String, val argTypes: List<String>)
 
 data class MethodInfo(val node: ITree, val id: MethodId)
 
