@@ -17,8 +17,8 @@ class IncrementalIdStorage<T> {
     val map: MutableMap<T, Long> = HashMap()
 
     private fun putAndIncrement(item: T): Long {
-        map[item] = keyCounter
-        return keyCounter++
+        map[item] = ++keyCounter
+        return keyCounter
     }
 
     fun record(item: T): Long {

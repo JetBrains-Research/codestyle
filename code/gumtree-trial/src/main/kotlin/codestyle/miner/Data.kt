@@ -126,8 +126,8 @@ fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, me
         out.println(header)
         fileChanges.forEach { fileChange ->
             fileChange.methodChanges.forEach {
-                val idBefore = if (it.methodIdBefore == null) -1 else methodIdStorage.record(it.methodIdBefore)
-                val idAfter = if (it.methodIdAfter == null) -1 else methodIdStorage.record(it.methodIdAfter)
+                val idBefore = if (it.methodIdBefore == null) 0 else methodIdStorage.record(it.methodIdBefore)
+                val idAfter = if (it.methodIdAfter == null) 0 else methodIdStorage.record(it.methodIdAfter)
                 val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
                 out.println(line)
             }
