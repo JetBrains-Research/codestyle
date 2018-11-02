@@ -33,7 +33,7 @@ data class MethodChangeInfo(val methodIdBefore: MethodId?, val methodIdAfter: Me
 
 data class FileChangeInfo(val changeEntryId: Int, val authorName: String, val authorEmail: String, val methodChanges: List<MethodChangeInfo>)
 
-enum class ClassType{CLASS, NESTED, INNER, ANONYMOUS}
+enum class ClassType{TOP_LEVEL, INNER, STATIC_NESTED, LOCAL, ANONYMOUS}
 
 data class MethodId(val enclosingClassName: String, val enclosingClassType: ClassType, val methodName: String, val argTypes: List<String>)
 
@@ -68,12 +68,12 @@ fun saveFileChanges(changes: List<FileChangeInfo>) {
 }
 
 fun dumpMethodIdStorage(storage: IncrementalIdStorage<MethodId>, filename: String) {
-    val header = "id,enclosingClass,methodName,argTypes"
+    val header = "id,enclosingClass,classType,methodName,argTypes"
     val lines = mutableListOf(header)
     storage.map.forEach {
         val id = it.value
         val methodId = it.key
-        val line = "$id,${methodId.enclosingClassName},${methodId.methodName},${methodId.argTypes.joinToString(";")}"
+        val line = "$id,${methodId.enclosingClassName},${methodId.enclosingClassType},${methodId.methodName},${methodId.argTypes.joinToString(";")}"
         lines.add(line)
     }
     writeLinesToFile(filename, lines)

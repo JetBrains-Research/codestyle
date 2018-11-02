@@ -21,7 +21,20 @@ fun getEnclosingClassName(methodNode: ITree, context: TreeContext): String {
 }
 
 fun getEnclosingClassType(methodNode: ITree, context: TreeContext): ClassType {
-    return ClassType.CLASS
+    val parentNode = methodNode.parents.firstOrNull { context.getTypeLabel(it.type) in setOf("TypeDeclaration", "AnonymousClassDeclaration") }
+            ?: return ClassType.TOP_LEVEL
+
+    val parentNodeType = context.getTypeLabel(parentNode)
+    if (parentNodeType == "AnonymousClassDeclaration") return ClassType.ANONYMOUS
+
+    val grandParentNode = parentNode.parents.firstOrNull{context.getTypeLabel(it.type) in setOf("TypeDeclaration", "MethodDeclaration")}
+            ?: return ClassType.TOP_LEVEL
+
+    if (context.getTypeLabel(grandParentNode) == "MethodDeclaration") return ClassType.LOCAL
+    parentNode.children.firstOrNull { context.getTypeLabel(it) == "Modifier" && it.label == "static" }
+            ?: return ClassType.INNER
+
+    return ClassType.STATIC_NESTED
 }
 
 fun getMethodName(methodNode: ITree, context: TreeContext): String {
