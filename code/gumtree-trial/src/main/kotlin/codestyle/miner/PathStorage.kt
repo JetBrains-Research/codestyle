@@ -41,9 +41,21 @@ class IncrementalIdStorage<T> {
     }
 }
 
+fun getNodeLabel(node: ITree, treeContext: TreeContext): String {
+    val tokenLabel = node.label
+    if (tokenLabel.isEmpty()) {
+        val nodeType = treeContext.getTypeLabel(node)
+        return "emptyToken_$nodeType"
+    }
+    if (tokenLabel.isBlank()) {
+        return "emptyToken_blankspaces"
+    }
+    return tokenLabel
+}
+
 fun createPath(upward: List<ITree>, downward: List<ITree>, treeContext: TreeContext): Path {
-    val startToken = upward[0].label
-    val endToken = downward[0].label
+    val startToken = getNodeLabel(upward[0], treeContext)
+    val endToken = getNodeLabel(downward[0], treeContext)
 
     return Path(startToken,
             upward.map { treeContext.getTypeLabel(it) },
