@@ -12,22 +12,32 @@ enum class Direction { UP, DOWN }
 data class NodeType(val direction: Direction, val type: String)
 
 class IncrementalIdStorage<T> {
-    private var recordCounter = 0L
     private var keyCounter = 0L
-    val map: MutableMap<T, Long> = HashMap()
+    val valueMap: MutableMap<T, Long> = HashMap()
+    private val idCountMap: MutableMap<Long, Long> = HashMap()
 
-    private fun putAndIncrement(item: T): Long {
-        map[item] = keyCounter
-        return keyCounter++
+    private fun putAndIncrementKey(item: T): Long {
+        valueMap[item] = ++keyCounter
+        return keyCounter
+    }
+
+    private fun incrementIdCount(id: Long) {
+        val count = idCountMap[id] ?: 0
+        idCountMap[id] = count + 1
     }
 
     fun record(item: T): Long {
-        recordCounter++
-        return map[item] ?: putAndIncrement(item)
+        val id = valueMap[item] ?: putAndIncrementKey(item)
+        incrementIdCount(id)
+        return id
     }
 
-    fun get(id: Long): T? {
-        return map.entries.first{it.value == id}.key
+    fun getIdCount(id: Long): Long {
+        return idCountMap[id]?:0
+    }
+
+    fun getValue(id: Long): T? {
+        return valueMap.entries.first { it.value == id }.key
     }
 }
 
@@ -64,9 +74,9 @@ class PathStorage {
     }
 
     fun getPathString(startToken: Long, pathId: Long, endToken: Long): String {
-        val start = tokenIds.get(startToken)
-        val end = tokenIds.get(endToken)
-        val path = pathIds.get(pathId)?.map { nodeTypeIds.get(it) }
+        val start = tokenIds.getValue(startToken)
+        val end = tokenIds.getValue(endToken)
+        val path = pathIds.getValue(pathId)?.map { nodeTypeIds.getValue(it) }
         return "$start $path $end"
     }
 

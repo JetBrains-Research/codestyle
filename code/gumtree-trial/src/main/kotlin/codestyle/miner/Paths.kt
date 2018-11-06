@@ -18,29 +18,29 @@ fun ITree.setPathPieces(pathPieces: Collection<List<ITree>>) {
     this.setMetadata(PATH_PIECES_KEY, pathPieces)
 }
 
-fun ITree.getPathPieces(): Collection<List<ITree>> = this.getMetadata(PATH_PIECES_KEY) as Collection<List<ITree>>
+fun ITree.getPathPieces(): Collection<MutableList<ITree>> = this.getMetadata(PATH_PIECES_KEY) as Collection<MutableList<ITree>>
 
 fun ITree.setLeafIndex(value: Int) = setIntValue(LEAF_INDEX_KEY, value)
 
 fun ITree.getMinLeafIndex() = getIntValue(LEAF_INDEX_KEY)
 
 
-fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>,
+fun getPathsForCurrentNode(pathPieces: Collection<PathPiece>,
                            maxLength: Int, maxWidth: Int,
                            treeContext: TreeContext,
-                           pathStorage: PathStorage,
-                           matchedPieces: MutableSet<Pair<List<ITree>, List<ITree>>>): Collection<PathContext> {
+                           pathStorage: PathStorage): Collection<PathContext> {
     val paths: MutableCollection<PathContext> = ArrayList()
-    val sortedPieces = pathPieces.sortedBy { (it[0].getMinLeafIndex()) }
+    val sortedPieces = pathPieces.sortedBy { (it.nodes[0].getMinLeafIndex()) }
     sortedPieces.forEachIndexed { index, upPiece ->
         for (i in (index + 1 until sortedPieces.size)) {
+
             val downPiece = sortedPieces[i]
-            val length = upPiece.size + downPiece.size - 1 // -1 as the top node is present in both pieces
-            val width = downPiece[0].getMinLeafIndex() - upPiece[0].getMinLeafIndex()
-            val piecePair = Pair(upPiece, downPiece)
-            if (length <= maxLength && width <= maxWidth && piecePair !in matchedPieces) {
-                paths.add(pathStorage.store(upPiece, downPiece, treeContext))
-                matchedPieces.add(piecePair)
+            if (upPiece.childIndex == downPiece.childIndex) continue
+
+            val length = upPiece.nodes.size + downPiece.nodes.size - 1 // -1 as the top node is present in both pieces
+            val width = downPiece.nodes[0].getMinLeafIndex() - upPiece.nodes[0].getMinLeafIndex()
+            if (length <= maxLength && width <= maxWidth) {
+                paths.add(pathStorage.store(upPiece.nodes, downPiece.nodes, treeContext))
             }
         }
     }
@@ -49,29 +49,37 @@ fun getPathsForCurrentNode(pathPieces: Collection<List<ITree>>,
 
 fun retrievePaths(treeContext: TreeContext, startNode: ITree, pathStorage: PathStorage) = retrievePaths(treeContext, startNode, pathStorage, Int.MAX_VALUE, Int.MAX_VALUE)
 
+data class PathPiece(val childIndex: Int, val nodes: List<ITree>)
+
 fun retrievePaths(treeContext: TreeContext, startNode: ITree, pathStorage: PathStorage, maxLength: Int, maxWidth: Int): Collection<PathContext> {
     val iterator = startNode.postOrder()
     var currentLeafIndex = 0
     val paths: MutableCollection<PathContext> = ArrayList()
-    val matchedPieces: MutableSet<Pair<List<ITree>, List<ITree>>> = HashSet()
-    iterator.forEach {
-        if (it.isLeaf) {
+    iterator.forEach { currentNode ->
+        if (currentNode.isLeaf) {
             val leafIndex = currentLeafIndex++
-            it.setLeafIndex(leafIndex)
-            it.setPathPieces(listOf(listOf(it)))
+            currentNode.setLeafIndex(leafIndex)
+            currentNode.setPathPieces(arrayListOf(arrayListOf(currentNode)))
         } else {
 
-            val childPathPieces = it.children.map { it.getPathPieces() }.flatten()
+            val pathPiecesPerChild = currentNode.children
+                    .map { it.getPathPieces() }
 
-            val currentNodePathPieces = childPathPieces
-                    // Filtering out the paths that are already too long.
-                    // -2 represent the current node and its possible immediate leaf child.
-                    .filter { pathPiece -> pathPiece.size <= maxLength - 2 }
-                    // Appending the current node to every piece
-                    .map { l -> l + it }
+            val pathPieces: MutableList<PathPiece> = ArrayList()
 
-            it.setPathPieces(currentNodePathPieces)
-            paths.addAll(getPathsForCurrentNode(currentNodePathPieces, maxLength, maxWidth, treeContext, pathStorage, matchedPieces))
+            pathPiecesPerChild.forEachIndexed { childIndex, childPieces ->
+                childPieces.forEach {
+                    // -2 represent the current node and its possible immediate leaf child
+                    if (it.size <= maxLength - 2) {
+                        pathPieces.add(PathPiece(childIndex, it + currentNode))
+                    }
+                }
+            }
+
+            val currentNodePaths = getPathsForCurrentNode(pathPieces, maxLength, maxWidth, treeContext, pathStorage)
+            paths.addAll(currentNodePaths)
+
+            currentNode.setPathPieces(pathPieces.map { it.nodes })
         }
     }
     return paths

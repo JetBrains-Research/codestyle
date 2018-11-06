@@ -12,7 +12,7 @@ class IdExtractionTest {
         val methodInfos = getMethodInfos(tree)
 
         Assert.assertEquals(1, methodInfos.size)
-        Assert.assertEquals(MethodId("SingleFunction", "fun", setOf("int", "String[]")), methodInfos.first().id)
+        Assert.assertEquals(MethodId("SingleFunction", ClassType.TOP_LEVEL, "fun", listOf("String[]", "int")), methodInfos.first().id)
     }
 
     @Test
@@ -22,7 +22,7 @@ class IdExtractionTest {
         val methodInfos = getMethodInfos(tree)
 
         Assert.assertEquals(1, methodInfos.size)
-        Assert.assertEquals(MethodId("InnerClass", "main", setOf("String[]")), methodInfos.first().id)
+        Assert.assertEquals(MethodId("InnerClass", ClassType.INNER, "main", listOf("String[]")), methodInfos.first().id)
     }
 
     @Test
@@ -32,7 +32,17 @@ class IdExtractionTest {
         val methodInfos = getMethodInfos(tree)
 
         Assert.assertEquals(2, methodInfos.size)
-        Assert.assertTrue(methodInfos.map { it.id }.contains(MethodId("InnerClass", "main", setOf("String[]"))))
-        Assert.assertTrue(methodInfos.map { it.id }.contains(MethodId("SingleMethodInnerClass", "fun", setOf("String[]", "int"))))
+        Assert.assertTrue(methodInfos.map { it.id }.contains(MethodId("InnerClass", ClassType.INNER, "main", listOf("String[]"))))
+        Assert.assertTrue(methodInfos.map { it.id }.contains(MethodId("SingleMethodInnerClass", ClassType.TOP_LEVEL, "fun", listOf("String[]", "int"))))
+    }
+
+    @Test
+    fun testIdExtraction4() {
+        val tree = parse("testData/idExtraction/4.java")
+
+        val methodInfos = getMethodInfos(tree)
+
+        Assert.assertEquals(1, methodInfos.size)
+        Assert.assertEquals(MethodId("SingleFunction", ClassType.TOP_LEVEL, "fun", listOf("int", "int")), methodInfos.first().id)
     }
 }

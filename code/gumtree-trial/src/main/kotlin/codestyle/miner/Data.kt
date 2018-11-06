@@ -33,7 +33,9 @@ data class MethodChangeInfo(val methodIdBefore: MethodId?, val methodIdAfter: Me
 
 data class FileChangeInfo(val changeEntryId: Int, val authorName: String, val authorEmail: String, val methodChanges: List<MethodChangeInfo>)
 
-data class MethodId(val enclosingClassName: String, val methodName: String, val argTypes: Set<String>)
+enum class ClassType{TOP_LEVEL, INNER, STATIC_NESTED, LOCAL, ANONYMOUS}
+
+data class MethodId(val enclosingClassName: String, val enclosingClassType: ClassType, val methodName: String, val argTypes: List<String>)
 
 data class MethodInfo(val node: ITree, val id: MethodId)
 
@@ -66,46 +68,46 @@ fun saveFileChanges(changes: List<FileChangeInfo>) {
 }
 
 fun dumpMethodIdStorage(storage: IncrementalIdStorage<MethodId>, filename: String) {
-    val header = "id,enclosingClass,methodName,argTypes"
+    val header = "id,count,enclosingClass,classType,methodName,argTypes"
     val lines = mutableListOf(header)
-    storage.map.forEach {
+    storage.valueMap.forEach {
         val id = it.value
         val methodId = it.key
-        val line = "$id,${methodId.enclosingClassName},${methodId.methodName},${methodId.argTypes.joinToString(";")}"
+        val line = "$id,${storage.getIdCount(id)},${methodId.enclosingClassName},${methodId.enclosingClassType},${methodId.methodName},${methodId.argTypes.joinToString(";")}"
         lines.add(line)
     }
     writeLinesToFile(filename, lines)
 }
 
 fun dumpStringIdStorage(storage: IncrementalIdStorage<String>, filename: String) {
-    val header = "id,value"
+    val header = "id,count,value"
     val lines = mutableListOf(header)
-    storage.map.forEach {
+    storage.valueMap.forEach {
         val id = it.value
         val stringValue = it.key
-        lines.add("$id,${stringValue.replace(',',' ')}")
+        lines.add("$id,${storage.getIdCount(id)},${stringValue.replace(',',' ')}")
     }
     writeLinesToFile(filename, lines)
 }
 
 fun dumpNodeTypeStorage(storage: IncrementalIdStorage<NodeType>, filename: String) {
-    val header = "id,type,direction"
+    val header = "id,count,type,direction"
     val lines = mutableListOf(header)
-    storage.map.forEach {
+    storage.valueMap.forEach {
         val id = it.value
         val nodeType = it.key
-        lines.add("$id,${nodeType.type},${nodeType.direction}")
+        lines.add("$id,${storage.getIdCount(id)},${nodeType.type},${nodeType.direction}")
     }
     writeLinesToFile(filename, lines)
 }
 
 fun dumpPathIdStorage(storage: IncrementalIdStorage<List<Long>>, filename: String) {
-    val header = "id,nodeTypes"
+    val header = "id,count,nodeTypes"
     val lines = mutableListOf(header)
-    storage.map.forEach { entry ->
+    storage.valueMap.forEach { entry ->
         val id = entry.value
         val nodeTypeIds = entry.key
-        lines.add("$id,${nodeTypeIds.joinToString(" ")}")
+        lines.add("$id,${storage.getIdCount(id)},${nodeTypeIds.joinToString(" ")}")
     }
     writeLinesToFile(filename, lines)
 }
@@ -126,8 +128,8 @@ fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, me
         out.println(header)
         fileChanges.forEach { fileChange ->
             fileChange.methodChanges.forEach {
-                val idBefore = if (it.methodIdBefore == null) -1 else methodIdStorage.record(it.methodIdBefore)
-                val idAfter = if (it.methodIdAfter == null) -1 else methodIdStorage.record(it.methodIdAfter)
+                val idBefore = if (it.methodIdBefore == null) 0 else methodIdStorage.record(it.methodIdBefore)
+                val idAfter = if (it.methodIdAfter == null) 0 else methodIdStorage.record(it.methodIdAfter)
                 val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
                 out.println(line)
             }

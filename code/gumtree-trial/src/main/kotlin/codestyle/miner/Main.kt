@@ -64,14 +64,20 @@ fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage): Mutabl
     val threads: MutableCollection<Thread> = HashSet()
     val infos: MutableList<FileChangeInfo> = ArrayList()
 
-    entries.chunked(chunkSize).forEach { chunk ->
+    entries.chunked(chunkSize).forEachIndexed { threadNumber, chunk ->
         val currentThread = thread {
+            var processed = 0
             chunk.forEach {
                 val info = processChangeEntry(it, pathStorage)
+                processed += 1
+                if (processed % 100 == 0) {
+                    println("Thread $threadNumber: processed $processed of ${chunk.size} entries")
+                }
                 synchronized(pathStorage) {
                     infos.add(info)
                 }
             }
+            println("Thread $threadNumber done")
         }
         threads.add(currentThread)
     }
@@ -146,5 +152,5 @@ fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage): FileChange
 }
 
 fun saveInfosToJson(filename: String, infos: List<FileChangeInfo>) {
-        GsonBuilder().setPrettyPrinting().create().toJson(infos, FileWriter(filename))
+    GsonBuilder().setPrettyPrinting().create().toJson(infos, FileWriter(filename))
 }
