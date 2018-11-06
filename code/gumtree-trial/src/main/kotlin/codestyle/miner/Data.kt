@@ -68,12 +68,12 @@ fun saveFileChanges(changes: List<FileChangeInfo>) {
 }
 
 fun dumpMethodIdStorage(storage: IncrementalIdStorage<MethodId>, filename: String) {
-    val header = "id,count,enclosingClass,classType,methodName,argTypes"
+    val header = "id;count;enclosingClass;classType;methodName;argTypes"
     val lines = mutableListOf(header)
     storage.valueMap.forEach {
         val id = it.value
         val methodId = it.key
-        val line = "$id,${storage.getIdCount(id)},${methodId.enclosingClassName},${methodId.enclosingClassType},${methodId.methodName},${methodId.argTypes.joinToString(";")}"
+        val line = "$id;${storage.getIdCount(id)};${methodId.enclosingClassName};${methodId.enclosingClassType};${methodId.methodName};${methodId.argTypes.joinToString("|")}"
         lines.add(line)
     }
     writeLinesToFile(filename, lines)
