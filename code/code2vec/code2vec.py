@@ -1,6 +1,6 @@
 from common import Config, VocabType
 from argparse import ArgumentParser
-from interactive_predict import InteractivePredictor
+# from interactive_predict import InteractivePredictor
 from model import Model
 import sys
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
             results, precision, recall, f1 = eval_results
             print(results)
             print('Precision: ' + str(precision) + ', recall: ' + str(recall) + ', F1: ' + str(f1))
-    if args.predict:
-        predictor = InteractivePredictor(config, model)
-        predictor.predict()
+    # if args.predict:
+        # predictor = InteractivePredictor(config, model)
+        # predictor.predict()
     model.close_session()

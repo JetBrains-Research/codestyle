@@ -10,17 +10,20 @@ class Config:
         config = Config()
         config.NUM_EPOCHS = 20
         config.SAVE_EVERY_EPOCHS = 1
-        config.BATCH_SIZE = 1024
+        config.BATCH_SIZE = 128
         config.TEST_BATCH_SIZE = config.BATCH_SIZE
         config.READING_BATCH_SIZE = 1300 * 4
         config.NUM_BATCHING_THREADS = 2
-        config.BATCH_QUEUE_SIZE = 300000
+        config.BATCH_QUEUE_SIZE = 30000
         config.MAX_CONTEXTS = 200
-        config.WORDS_VOCAB_SIZE = 1301136
-        config.TARGET_VOCAB_SIZE = 261245
-        config.PATHS_VOCAB_SIZE = 911417
+        config.PATH_LIMIT = 1000
+        config.WORDS_VOCAB_SIZE = 690708
+        config.TARGET_VOCAB_SIZE = 10
+        config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 128
         config.MAX_TO_KEEP = 10
+        config.NUM_EXAMPLES = 165690
+        config.DATASET_FOLDER = 'dataset/'
         # Automatically filled, do not edit:
         config.TRAIN_PATH = args.data_path
         config.TEST_PATH = args.test_path

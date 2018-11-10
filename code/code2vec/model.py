@@ -5,6 +5,7 @@ import numpy as np
 import time
 import pickle
 from common import common, VocabType
+from loader import Loader
 
 
 class Model:
@@ -27,36 +28,12 @@ class Model:
         if config.LOAD_PATH:
             self.load_model(sess=None)
         else:
-            with open('{}.dict.c2v'.format(config.TRAIN_PATH), 'rb') as file:
-                word_to_count = pickle.load(file)
-                path_to_count = pickle.load(file)
-                target_to_count = pickle.load(file)
-                num_training_examples = pickle.load(file)
-                print('Dictionaries loaded.')
-            self.config.NUM_EXAMPLES = num_training_examples
-
-            self.word_to_index, self.index_to_word, self.word_vocab_size = \
-                common.load_vocab_from_dict(word_to_count, config.WORDS_VOCAB_SIZE, start_from=1)
-            print('Loaded word vocab. size: %d' % self.word_vocab_size)
-
-            self.target_word_to_index, self.index_to_target_word, self.target_word_vocab_size = \
-                common.load_vocab_from_dict(target_to_count, config.TARGET_VOCAB_SIZE,
-                                            start_from=1)
-            print('Loaded target word vocab. size: %d' % self.target_word_vocab_size)
-
-            self.path_to_index, self.index_to_path, self.path_vocab_size = \
-                common.load_vocab_from_dict(path_to_count, config.PATHS_VOCAB_SIZE,
-                                            start_from=1)
-            print('Loaded paths vocab. size: %d' % self.path_vocab_size)
-
-        self.create_index_to_target_word_map()
-
-    def create_index_to_target_word_map(self):
-        self.index_to_target_word_table = tf.contrib.lookup.HashTable(
-                tf.contrib.lookup.KeyValueTensorInitializer(list(self.index_to_target_word.keys()),
-                                                            list(self.index_to_target_word.values()),
-                                                            key_dtype=tf.int64, value_dtype=tf.string),
-                default_value=tf.constant(common.noSuchWord, dtype=tf.string))
+            loader = Loader(config.DATASET_FOLDER)
+            self.methods = loader.load_methods()
+            self.nodes = loader.load_nodes()
+            self.tokens = loader.load_tokens()
+            self.paths = loader.load_paths()
+            print('Dataset information loaded.')
 
     def close_session(self):
         self.sess.close()
@@ -71,10 +48,7 @@ class Model:
         num_batches_to_evaluate = max(int(
             self.config.NUM_EXAMPLES / self.config.BATCH_SIZE * self.config.SAVE_EVERY_EPOCHS), 1)
 
-        self.queue_thread = PathContextReader.PathContextReader(word_to_index=self.word_to_index,
-                                                                path_to_index=self.path_to_index,
-                                                                target_word_to_index=self.target_word_to_index,
-                                                                config=self.config)
+        self.queue_thread = PathContextReader.PathContextReader(config=self.config)
         optimizer, train_loss = self.build_training_graph(self.queue_thread.input_tensors())
         self.saver = tf.train.Saver(max_to_keep=self.config.MAX_TO_KEEP)
 
@@ -125,12 +99,9 @@ class Model:
     def evaluate(self):
         eval_start_time = time.time()
         if self.eval_queue is None:
-            self.eval_queue = PathContextReader.PathContextReader(word_to_index=self.word_to_index,
-                                                                  path_to_index=self.path_to_index,
-                                                                  target_word_to_index=self.target_word_to_index,
-                                                                  config=self.config, is_evaluating=True)
+            self.eval_queue = PathContextReader.PathContextReader(config=self.config, is_evaluating=True)
             self.eval_placeholder = self.eval_queue.get_input_placeholder()
-            self.eval_top_words_op, self.eval_top_values_op, self.eval_original_names_op, _, _, _, _ = \
+            self.eval_top_values_op, self.eval_original_names_op, _, _, _, _ = \
                 self.build_test_graph(self.eval_queue.get_filtered_batches())
             self.saver = tf.train.Saver()
 
@@ -139,8 +110,8 @@ class Model:
             self.load_model(self.sess)
             if self.config.RELEASE:
                 release_name = self.config.LOAD_PATH + '.release'
-                print('Releasing model, output model: %s' % release_name )
-                self.saver.save(self.sess, release_name )
+                print('Releasing model, output model: %s' % release_name)
+                self.saver.save(self.sess, release_name)
                 return None
 
         if self.eval_data_lines is None:
@@ -175,7 +146,8 @@ class Model:
                 if total_prediction_batches % self.num_batches_to_log == 0:
                     elapsed = time.time() - start_time
                     # start_time = time.time()
-                    self.trace_evaluation(output_file, num_correct_predictions, total_predictions, elapsed, len(self.eval_data_lines))
+                    self.trace_evaluation(output_file, num_correct_predictions, total_predictions, elapsed,
+                                          len(self.eval_data_lines))
 
             print('Done testing, epoch reached')
             output_file.write(str(num_correct_predictions / total_predictions) + '\n')
@@ -212,7 +184,8 @@ class Model:
     @staticmethod
     def trace_evaluation(output_file, correct_predictions, total_predictions, elapsed, total_examples):
         state_message = 'Evaluated %d/%d examples...' % (total_predictions, total_examples)
-        throughput_message = "Prediction throughput: %d samples/sec" % int(total_predictions / (elapsed if elapsed > 0 else 1))
+        throughput_message = "Prediction throughput: %d samples/sec" % int(
+            total_predictions / (elapsed if elapsed > 0 else 1))
         print(state_message)
         print(throughput_message)
 
@@ -235,24 +208,24 @@ class Model:
         return num_correct_predictions
 
     def build_training_graph(self, input_tensors):
-        words_input, source_input, path_input, target_input, valid_mask = input_tensors  # (batch, 1),   (batch, max_contexts)
+        words_input, source_input, path_input, target_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
 
         with tf.variable_scope('model'):
-            words_vocab = tf.get_variable('WORDS_VOCAB', shape=(self.word_vocab_size + 1, self.config.EMBEDDINGS_SIZE),
+            words_vocab = tf.get_variable('WORDS_VOCAB', shape=(self.config.WORDS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32,
                                           initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
                                                                                                      mode='FAN_OUT',
                                                                                                      uniform=True))
             target_words_vocab = tf.get_variable('TARGET_WORDS_VOCAB',
                                                  shape=(
-                                                     self.target_word_vocab_size + 1, self.config.EMBEDDINGS_SIZE * 3),
+                                                     self.config.TARGET_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE * 3),
                                                  dtype=tf.float32,
                                                  initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
                                                                                                             mode='FAN_OUT',
                                                                                                             uniform=True))
             attention_param = tf.get_variable('ATTENTION',
                                               shape=(self.config.EMBEDDINGS_SIZE * 3, 1), dtype=tf.float32)
-            paths_vocab = tf.get_variable('PATHS_VOCAB', shape=(self.path_vocab_size + 1, self.config.EMBEDDINGS_SIZE),
+            paths_vocab = tf.get_variable('PATHS_VOCAB', shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32,
                                           initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
                                                                                                      mode='FAN_OUT',
@@ -309,17 +282,19 @@ class Model:
 
     def build_test_graph(self, input_tensors, normalize_scores=False):
         with tf.variable_scope('model', reuse=self.get_should_reuse_variables()):
-            words_vocab = tf.get_variable('WORDS_VOCAB', shape=(self.word_vocab_size + 1, self.config.EMBEDDINGS_SIZE),
+            words_vocab = tf.get_variable('WORDS_VOCAB',
+                                          shape=(self.config.WORDS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32, trainable=False)
             target_words_vocab = tf.get_variable('TARGET_WORDS_VOCAB',
                                                  shape=(
-                                                     self.target_word_vocab_size + 1, self.config.EMBEDDINGS_SIZE * 3),
+                                                     self.config.TARGET_VOCAB_SIZE + 1,
+                                                     self.config.EMBEDDINGS_SIZE * 3),
                                                  dtype=tf.float32, trainable=False)
             attention_param = tf.get_variable('ATTENTION',
                                               shape=(self.config.EMBEDDINGS_SIZE * 3, 1),
                                               dtype=tf.float32, trainable=False)
             paths_vocab = tf.get_variable('PATHS_VOCAB',
-                                          shape=(self.path_vocab_size + 1, self.config.EMBEDDINGS_SIZE),
+                                          shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32, trainable=False)
 
             target_words_vocab = tf.transpose(target_words_vocab)  # (dim, word_vocab+1)
@@ -334,25 +309,21 @@ class Model:
 
         cos = tf.matmul(weighted_average_contexts, target_words_vocab)
 
-        topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.target_word_vocab_size))
+        topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.config.TARGET_VOCAB_SIZE))
         top_indices = tf.to_int64(topk_candidates.indices)
-        top_words = self.index_to_target_word_table.lookup(top_indices)
         original_words = words_input
         top_scores = topk_candidates.values
         if normalize_scores:
             top_scores = tf.nn.softmax(top_scores)
 
-        return top_words, top_scores, original_words, attention_weights, source_string, path_string, path_target_string
+        return top_scores, original_words, attention_weights, source_string, path_string, path_target_string
 
     def predict(self, predict_data_lines):
         if self.predict_queue is None:
-            self.predict_queue = PathContextReader.PathContextReader(word_to_index=self.word_to_index,
-                                                                     path_to_index=self.path_to_index,
-                                                                     target_word_to_index=self.target_word_to_index,
-                                                                     config=self.config, is_evaluating=True)
+            self.predict_queue = PathContextReader.PathContextReader(config=self.config, is_evaluating=True)
             self.predict_placeholder = self.predict_queue.get_input_placeholder()
-            self.predict_top_words_op, self.predict_top_values_op, self.predict_original_names_op, \
-            self.attention_weights_op, self.predict_source_string, self.predict_path_string, self.predict_path_target_string = \
+            self.predict_top_values_op, self.predict_original_names_op, self.attention_weights_op, \
+            self.predict_source_string, self.predict_path_string, self.predict_path_target_string = \
                 self.build_test_graph(self.predict_queue.get_filtered_batches(), normalize_scores=True)
 
             self.initialize_session_variables(self.sess)
@@ -384,46 +355,21 @@ class Model:
             attention_per_context[string_triplet] = weight
         return attention_per_context
 
-    @staticmethod
-    def get_dictionaries_path(model_file_path):
-        dictionaries_save_file_name = "dictionaries.bin"
-        return '/'.join(model_file_path.split('/')[:-1] + [dictionaries_save_file_name])
-
     def save_model(self, sess, path):
         self.saver.save(sess, path)
-        with open(self.get_dictionaries_path(path), 'wb') as file:
-            pickle.dump(self.word_to_index, file)
-            pickle.dump(self.index_to_word, file)
-            pickle.dump(self.word_vocab_size, file)
-
-            pickle.dump(self.target_word_to_index, file)
-            pickle.dump(self.index_to_target_word, file)
-            pickle.dump(self.target_word_vocab_size, file)
-
-            pickle.dump(self.path_to_index, file)
-            pickle.dump(self.index_to_path, file)
-            pickle.dump(self.path_vocab_size, file)
 
     def load_model(self, sess):
         if not sess is None:
             print('Loading model weights from: ' + self.config.LOAD_PATH)
             self.saver.restore(sess, self.config.LOAD_PATH)
             print('Done')
-        dictionaries_path = self.get_dictionaries_path(self.config.LOAD_PATH)
-        with open(dictionaries_path , 'rb') as file:
-            print('Loading model dictionaries from: %s' % dictionaries_path)
-            self.word_to_index = pickle.load(file)
-            self.index_to_word = pickle.load(file)
-            self.word_vocab_size = pickle.load(file)
 
-            self.target_word_to_index = pickle.load(file)
-            self.index_to_target_word = pickle.load(file)
-            self.target_word_vocab_size = pickle.load(file)
-
-            self.path_to_index = pickle.load(file)
-            self.index_to_path = pickle.load(file)
-            self.path_vocab_size = pickle.load(file)
-            print('Done')
+        loader = Loader(self.config.DATASET_FOLDER)
+        self.methods = loader.load_methods()
+        self.nodes = loader.load_nodes()
+        self.tokens = loader.load_tokens()
+        self.paths = loader.load_paths()
+        print('Dataset information loaded.')
 
     def save_word2vec_format(self, dest, source):
         with tf.variable_scope('model', reuse=True):
