@@ -80,7 +80,10 @@ class Model:
                         print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
                         print('Per class statistics after ' + str(epoch_num) + 'epochs:')
                         for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
-                            print('Class ' + str(i + 1) + ': precision: ' + str(precision) + ', recall: ' + str(recall) + ', F1: ' + str(f1))
+                            print('Class ' + str(i + 1) +
+                                  ': precision: ' + str(p) +
+                                  ', recall: ' + str(r) +
+                                  ', F1: ' + str(f))
 
             except tf.errors.OutOfRangeError:
                 print('Done training')
