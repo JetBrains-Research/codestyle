@@ -75,9 +75,9 @@ class Model:
                         save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
                         self.save_model(self.sess, save_target)
                         print('Saved after %d epochs in: %s' % (epoch_num, save_target))
-                        results, precision, recall, f1 = self.evaluate()
+                        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate()
                         print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
-                        print('Per class statistics after ' + str(epoch_num) + 'epochs:')
+                        print('Per class statistics after ' + str(epoch_num) + ' epochs:')
                         for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
                             print('Class ' + str(i + 1) +
                                   ': precision: ' + str(p) +
@@ -86,6 +86,10 @@ class Model:
                         print('Mean precision: ' + str(np.mean(precision)) +
                               ', mean recall: ' + str(np.mean(recall)) +
                               ', mean F1: ' + str(np.mean(f1)))
+                        print('Confuse matrix:')
+                        print(confuse_matrix)
+                        print('Rank matrix:')
+                        print(rank_matrix)
 
             except tf.errors.OutOfRangeError:
                 print('Done training')
@@ -136,6 +140,8 @@ class Model:
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
+            confuse_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.int32)
+            rank_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.float32)
 
             start_time = time.time()
 
@@ -151,6 +157,9 @@ class Model:
                 true_positive, false_positive, false_negative = \
                     self.update_per_class_stats(zip(original_entities, top_indices),
                                                 true_positive, false_positive, false_negative)
+
+                confuse_matrix = self.compute_confuse_matrix(zip(original_entities, top_indices), confuse_matrix)
+                rank_matrix = self.compute_rank_matrix(zip(original_entities, top_indices), rank_matrix)
 
                 total_predictions += len(original_entities)
                 total_prediction_batches += 1
@@ -168,7 +177,7 @@ class Model:
         print("Evaluation time: %sH:%sM:%sS" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
         del self.eval_data_lines
         self.eval_data_lines = None
-        return num_correct_predictions / total_predictions, precision, recall, f1
+        return num_correct_predictions / total_predictions, precision, recall, f1, confuse_matrix, rank_matrix / total_predictions
 
     @staticmethod
     def update_per_class_stats(results, true_positive, false_positive, false_negative):
@@ -180,6 +189,20 @@ class Model:
                 false_positive[prediction - 1] += 1
                 false_negative[original_entity - 1] += 1
         return true_positive, false_positive, false_negative
+
+    @staticmethod
+    def compute_confuse_matrix(results, confuse_matrix):
+        for original_entity, top_indices in results:
+            prediction = top_indices[0]
+            confuse_matrix[original_entity - 1][prediction - 1] += 1
+        return confuse_matrix
+
+    @staticmethod
+    def compute_rank_matrix(results, rank_matrix):
+        for original_entity, top_indices in results:
+            for i, prediction in enumerate(top_indices):
+                rank_matrix[original_entity - 1][prediction - 1] += i + 1
+        return rank_matrix
 
     @staticmethod
     def calculate_results(true_positive, false_positive, false_negative):

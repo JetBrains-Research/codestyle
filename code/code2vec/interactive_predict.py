@@ -1,7 +1,7 @@
 import traceback
 
 from common import common
-from extractor import Extractor
+# from extractor import Extractor
 
 SHOW_TOP_CONTEXTS = 10
 MAX_PATH_LENGTH = 8
@@ -16,10 +16,10 @@ class InteractivePredictor:
         model.predict([])
         self.model = model
         self.config = config
-        self.path_extractor = Extractor(config,
-                                        jar_path=JAR_PATH,
-                                        max_path_length=MAX_PATH_LENGTH,
-                                        max_path_width=MAX_PATH_WIDTH)
+        # self.path_extractor = Extractor(config,
+        #                                 jar_path=JAR_PATH,
+        #                                 max_path_length=MAX_PATH_LENGTH,
+        #                                 max_path_width=MAX_PATH_WIDTH)
 
     def read_file(self, input_filename):
         with open(input_filename, 'r') as file:
