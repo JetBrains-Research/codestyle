@@ -328,7 +328,7 @@ class Model:
 
         flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * max_contexts, dim * 3)
 
-        context_weights_1 = tf.nn.tanh(
+        context_weights_1 = tf.nn.relu(
             tf.matmul(flat_embed, attention_net['w1']) + attention_net['b1'])  # (batch * max_contexts, dim)
         context_weights_2 = tf.matmul(context_weights_1, attention_net['w2']) + attention_net[
             'b2']  # (batch * max_contexts, 1)
