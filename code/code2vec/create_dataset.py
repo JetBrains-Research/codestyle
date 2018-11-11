@@ -14,14 +14,16 @@ def get_file(path2file, l, r):
     return path2file + str(l) + '_' + str(r) + '.csv'
 
 
+np.random.seed(42)
+
 buckets = [(1, 2), (3, 4), (5, 6), (7, 10)]
 path2train = path2dataset + 'train_creations_{}_{}.csv'.format(buckets[0][0], buckets[-1][1])
 path2test = path2dataset + 'test_creations_{}_{}.csv'.format(buckets[0][0], buckets[-1][1])
 
-f_train = open(path2train, 'w')
-f_test = open(path2test, 'w')
-
 count_max = 1000
+
+train_data = []
+test_data = []
 
 for l, r in buckets:
     with open(get_file(path2creations, l, r), 'r') as fin:
@@ -31,9 +33,17 @@ for l, r in buckets:
                 continue
             line = line[:-1] + ',' * (count_max - line.count(',')) + '\n'
             if np.random.uniform() < 0.3:
-                f_test.write(line)
+                test_data.append(line)
             else:
-                f_train.write(line)
+                train_data.append(line)
 
-f_train.close()
-f_test.close()
+np.random.shuffle(train_data)
+np.random.shuffle(test_data)
+
+with open(path2train, 'w') as f_train:
+    for line in train_data:
+        f_train.write(line)
+
+with open(path2test, 'w') as f_test:
+    for line in test_data:
+        f_test.write(line)
