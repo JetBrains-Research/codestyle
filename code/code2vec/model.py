@@ -246,7 +246,7 @@ class Model:
         attention_net = {
             'w1': tf.get_variable('ATTENTION_W1',
                                   shape=(self.config.EMBEDDINGS_SIZE * 3,
-                                         self.config.EMBEDDINGS_SIZE),
+                                         1),
                                   initializer=tf.random_normal_initializer(),
                                   dtype=tf.float32),
             'b1': tf.get_variable('ATTENTION_B1',
@@ -328,11 +328,11 @@ class Model:
 
         flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * max_contexts, dim * 3)
 
-        context_weights_1 = tf.nn.relu(
-            tf.matmul(flat_embed, attention_net['w1']) + attention_net['b1'])  # (batch * max_contexts, dim)
-        context_weights_2 = tf.matmul(context_weights_1, attention_net['w2']) + attention_net[
-            'b2']  # (batch * max_contexts, 1)
-
+        # context_weights_1 = tf.nn.relu(
+        #     tf.matmul(flat_embed, attention_net['w1']) + attention_net['b1'])  # (batch * max_contexts, dim)
+        # context_weights_2 = tf.matmul(context_weights_1, attention_net['w2']) + attention_net[
+        #     'b2']  # (batch * max_contexts, 1)
+        context_weights_2 = tf.matmul(flat_embed, attention_net['w1'])
         batched_contexts_weights = tf.reshape(context_weights_2,
                                               [-1, max_contexts, 1])  # (batch, max_contexts, 1)
         mask = tf.log(valid_mask)  # (batch, max_contexts)
