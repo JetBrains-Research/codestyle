@@ -45,9 +45,10 @@ if __name__ == '__main__':
     if config.TEST_PATH and not args.data_path:
         eval_results = model.evaluate()
         if eval_results is not None:
-            results, precision, recall, f1 = eval_results
+            # results, precision, recall, f1 = eval_results
+            results = eval_results
             print(results)
-            print('Precision: ' + str(precision) + ', recall: ' + str(recall) + ', F1: ' + str(f1))
+            # print('Precision: ' + str(precision) + ', recall: ' + str(recall) + ', F1: ' + str(f1))
     # if args.predict:
         # predictor = InteractivePredictor(config, model)
         # predictor.predict()

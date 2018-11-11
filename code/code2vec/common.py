@@ -17,8 +17,8 @@ class Config:
         config.BATCH_QUEUE_SIZE = 30000
         config.MAX_CONTEXTS = 200
         config.PATH_LIMIT = 1000
-        config.WORDS_VOCAB_SIZE = 690708
-        config.TARGET_VOCAB_SIZE = 10
+        config.TOKENS_VOCAB_SIZE = 690708
+        config.ENTITIES_VOCAB_SIZE = 10
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 128
         config.MAX_TO_KEEP = 10
@@ -43,13 +43,16 @@ class Config:
         self.TRAIN_PATH = ''
         self.TEST_PATH = ''
         self.MAX_CONTEXTS = 0
-        self.WORDS_VOCAB_SIZE = 0
-        self.TARGET_VOCAB_SIZE = 0
+        self.PATH_LIMIT = 0
+        self.TOKENS_VOCAB_SIZE = 0
+        self.ENTITIES_VOCAB_SIZE = 0
         self.PATHS_VOCAB_SIZE = 0
         self.EMBEDDINGS_SIZE = 0
         self.SAVE_PATH = ''
         self.LOAD_PATH = ''
         self.MAX_TO_KEEP = 0
+        self.NUM_EXAMPLES = 0
+        self.DATASET_FOLDER = ''
         self.RELEASE = False
 
 

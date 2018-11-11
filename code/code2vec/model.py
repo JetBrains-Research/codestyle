@@ -8,6 +8,7 @@ from common import common, VocabType
 from loader import Loader
 
 
+# noinspection PyUnresolvedReferences
 class Model:
     topk = 10
     num_batches_to_log = 100
@@ -22,8 +23,8 @@ class Model:
 
         self.eval_placeholder = None
         self.predict_placeholder = None
-        self.eval_top_words_op, self.eval_top_values_op, self.eval_original_names_op = None, None, None
-        self.predict_top_words_op, self.predict_top_values_op, self.predict_original_names_op = None, None, None
+        self.predict_top_indices_op, self.predict_top_scores_op, \
+        self.predict_original_entities_op, self.attention_weights_op = None, None, None, None
 
         if config.LOAD_PATH:
             self.load_model(sess=None)
@@ -75,10 +76,11 @@ class Model:
                         save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
                         self.save_model(self.sess, save_target)
                         print('Saved after %d epochs in: %s' % (epoch_num, save_target))
-                        results, precision, recall, f1 = self.evaluate()
+                        # results, precision, recall, f1 = self.evaluate()
+                        results = self.evaluate()
                         print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
-                        print('After ' + str(epoch_num) + ' epochs: Precision: ' + str(precision) + ', recall: ' + str(
-                            recall) + ', F1: ' + str(f1))
+                        # print('After ' + str(epoch_num) + ' epochs: Precision: ' + str(precision) + ', recall: ' + str(
+                        #     recall) + ', F1: ' + str(f1))
             except tf.errors.OutOfRangeError:
                 print('Done training')
 
@@ -101,7 +103,8 @@ class Model:
         if self.eval_queue is None:
             self.eval_queue = PathContextReader.PathContextReader(config=self.config, is_evaluating=True)
             self.eval_placeholder = self.eval_queue.get_input_placeholder()
-            self.eval_top_values_op, self.eval_original_names_op, _, _, _, _ = \
+            self.predict_top_indices_op, self.predict_top_scores_op, \
+            self.predict_original_entities_op, self.attention_weights_op = \
                 self.build_test_graph(self.eval_queue.get_filtered_batches())
             self.saver = tf.train.Saver()
 
@@ -123,25 +126,23 @@ class Model:
             num_correct_predictions = np.zeros(self.topk)
             total_predictions = 0
             total_prediction_batches = 0
-            true_positive, false_positive, false_negative = 0, 0, 0
+            # true_positive, false_positive, false_negative = 0, 0, 0
             start_time = time.time()
 
             for batch in common.split_to_batches(self.eval_data_lines, self.config.TEST_BATCH_SIZE):
-                top_words, top_scores, original_names = self.sess.run(
-                    [self.eval_top_words_op, self.eval_top_values_op, self.eval_original_names_op],
+                top_indices, top_scores, original_entities = self.sess.run(
+                    [self.predict_top_indices_op, self.predict_top_scores_op, self.predict_original_entities_op],
                     feed_dict={self.eval_placeholder: batch})
-                top_words, original_names = common.binary_to_string_matrix(top_words), common.binary_to_string_matrix(
-                    original_names)
                 # Flatten original names from [[]] to []
-                original_names = [w for l in original_names for w in l]
+                original_entities = [w for l in original_entities for w in l]
 
                 num_correct_predictions = self.update_correct_predictions(num_correct_predictions, output_file,
-                                                                          zip(original_names, top_words))
-                true_positive, false_positive, false_negative = self.update_per_subtoken_statistics(
-                    zip(original_names, top_words),
-                    true_positive, false_positive, false_negative)
+                                                                          zip(original_entities, top_indices))
+                # true_positive, false_positive, false_negative = self.update_per_subtoken_statistics(
+                #     zip(original_entities, top_indices),
+                #     true_positive, false_positive, false_negative)
 
-                total_predictions += len(original_names)
+                total_predictions += len(original_entities)
                 total_prediction_batches += 1
                 if total_prediction_batches % self.num_batches_to_log == 0:
                     elapsed = time.time() - start_time
@@ -153,11 +154,11 @@ class Model:
             output_file.write(str(num_correct_predictions / total_predictions) + '\n')
 
         elapsed = int(time.time() - eval_start_time)
-        precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
+        # precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
         print("Evaluation time: %sH:%sM:%sS" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
         del self.eval_data_lines
         self.eval_data_lines = None
-        return num_correct_predictions / total_predictions, precision, recall, f1
+        return num_correct_predictions / total_predictions#, precision, recall, f1
 
     def update_per_subtoken_statistics(self, results, true_positive, false_positive, false_negative):
         for original_name, top_words in results:
@@ -190,71 +191,74 @@ class Model:
         print(throughput_message)
 
     def update_correct_predictions(self, num_correct_predictions, output_file, results):
-        for original_name, top_words in results:
-            normalized_original_name = common.normalize_word(original_name)
+        for original_entity, top_indices in results:
             predicted_something = False
-            for i, predicted_word in enumerate(common.filter_impossible_names(top_words)):
+            for i, predicted_author in enumerate(top_indices):
                 if i == 0:
-                    output_file.write('Original: ' + original_name + ', predicted 1st: ' + predicted_word + '\n')
+                    output_file.write('Original: ' + str(original_entity) + ', predicted 1st: ' + str(predicted_author) + '\n')
                 predicted_something = True
-                normalized_suggestion = common.normalize_word(predicted_word)
-                if normalized_original_name == normalized_suggestion:
+                if original_entity == predicted_author:
                     output_file.write('\t\t predicted correctly at rank: ' + str(i + 1) + '\n')
                     for j in range(i, self.topk):
                         num_correct_predictions[j] += 1
                     break
             if not predicted_something:
-                output_file.write('No results for predicting: ' + original_name)
+                output_file.write('No results for predicting: ' + str(original_entity))
         return num_correct_predictions
 
     def build_training_graph(self, input_tensors):
-        words_input, source_input, path_input, target_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
+        entities_input, start_terminal_input, path_input, end_terminal_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
 
         with tf.variable_scope('model'):
-            words_vocab = tf.get_variable('WORDS_VOCAB', shape=(self.config.WORDS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
-                                          dtype=tf.float32,
-                                          initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
-                                                                                                     mode='FAN_OUT',
-                                                                                                     uniform=True))
-            target_words_vocab = tf.get_variable('TARGET_WORDS_VOCAB',
-                                                 shape=(
-                                                     self.config.TARGET_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE * 3),
-                                                 dtype=tf.float32,
-                                                 initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
-                                                                                                            mode='FAN_OUT',
-                                                                                                            uniform=True))
+            tokens_vocab = tf.get_variable('TOKENS_VOCAB',
+                                           shape=(self.config.TOKENS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
+                                           dtype=tf.float32,
+                                           initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
+                                                                                                      mode='FAN_OUT',
+                                                                                                      uniform=True))
+            entities_vocab = tf.get_variable('ENTITIES_VOCAB',
+                                             shape=(
+                                                 self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE * 3),
+                                             dtype=tf.float32,
+                                             initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
+                                                                                                        mode='FAN_OUT',
+                                                                                                        uniform=True))
             attention_param = tf.get_variable('ATTENTION',
                                               shape=(self.config.EMBEDDINGS_SIZE * 3, 1), dtype=tf.float32)
-            paths_vocab = tf.get_variable('PATHS_VOCAB', shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
+
+            paths_vocab = tf.get_variable('PATHS_VOCAB',
+                                          shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32,
                                           initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
                                                                                                      mode='FAN_OUT',
                                                                                                      uniform=True))
 
-            weighted_average_contexts, _ = self.calculate_weighted_contexts(words_vocab, paths_vocab, attention_param,
-                                                                            source_input, path_input, target_input,
-                                                                            valid_mask)
+            weighted_average_contexts, _ = self.calculate_weighted_contexts(
+                tokens_vocab, paths_vocab, attention_param, start_terminal_input, path_input, end_terminal_input,
+                valid_mask)
 
-            logits = tf.matmul(weighted_average_contexts, target_words_vocab, transpose_b=True)
-            batch_size = tf.to_float(tf.shape(words_input)[0])
+            logits = tf.matmul(weighted_average_contexts, entities_vocab, transpose_b=True)
+            batch_size = tf.to_float(tf.shape(entities_input)[0])
             loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=tf.reshape(words_input, [-1]),
+                labels=tf.reshape(entities_input, [-1]),
                 logits=logits)) / batch_size
 
             optimizer = tf.train.AdamOptimizer().minimize(loss)
 
         return optimizer, loss
 
-    def calculate_weighted_contexts(self, words_vocab, paths_vocab, attention_param, source_input, path_input,
-                                    target_input, valid_mask, is_evaluating=False):
+    def calculate_weighted_contexts(self, tokens_vocab, paths_vocab, attention_param, start_terminal_input, path_input,
+                                    end_terminal_input, valid_mask, is_evaluating=False):
         keep_prob1 = 0.75
         max_contexts = self.config.MAX_CONTEXTS
 
-        source_word_embed = tf.nn.embedding_lookup(params=words_vocab, ids=source_input)  # (batch, max_contexts, dim)
+        start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab,
+                                                   ids=start_terminal_input)  # (batch, max_contexts, dim)
         path_embed = tf.nn.embedding_lookup(params=paths_vocab, ids=path_input)  # (batch, max_contexts, dim)
-        target_word_embed = tf.nn.embedding_lookup(params=words_vocab, ids=target_input)  # (batch, max_contexts, dim)
+        end_token_embed = tf.nn.embedding_lookup(params=tokens_vocab,
+                                                 ids=end_terminal_input)  # (batch, max_contexts, dim)
 
-        context_embed = tf.concat([source_word_embed, path_embed, target_word_embed],
+        context_embed = tf.concat([start_token_embed, path_embed, end_token_embed],
                                   axis=-1)  # (batch, max_contexts, dim * 3)
         if not is_evaluating:
             context_embed = tf.nn.dropout(context_embed, keep_prob1)
@@ -282,48 +286,49 @@ class Model:
 
     def build_test_graph(self, input_tensors, normalize_scores=False):
         with tf.variable_scope('model', reuse=self.get_should_reuse_variables()):
-            words_vocab = tf.get_variable('WORDS_VOCAB',
-                                          shape=(self.config.WORDS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
-                                          dtype=tf.float32, trainable=False)
-            target_words_vocab = tf.get_variable('TARGET_WORDS_VOCAB',
-                                                 shape=(
-                                                     self.config.TARGET_VOCAB_SIZE + 1,
-                                                     self.config.EMBEDDINGS_SIZE * 3),
-                                                 dtype=tf.float32, trainable=False)
+            tokens_vocab = tf.get_variable('TOKENS_VOCAB',
+                                           shape=(self.config.TOKENS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
+                                           dtype=tf.float32, trainable=False)
+
+            entities_vocab = tf.get_variable('ENTITIES_VOCAB',
+                                             shape=(
+                                                 self.config.ENTITIES_VOCAB_SIZE + 1,
+                                                 self.config.EMBEDDINGS_SIZE * 3),
+                                             dtype=tf.float32, trainable=False)
+
             attention_param = tf.get_variable('ATTENTION',
                                               shape=(self.config.EMBEDDINGS_SIZE * 3, 1),
                                               dtype=tf.float32, trainable=False)
+
             paths_vocab = tf.get_variable('PATHS_VOCAB',
                                           shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32, trainable=False)
 
-            target_words_vocab = tf.transpose(target_words_vocab)  # (dim, word_vocab+1)
+            entities_vocab = tf.transpose(entities_vocab)  # (dim, word_vocab+1)
 
-            words_input, source_input, path_input, target_input, valid_mask, source_string, path_string, path_target_string = input_tensors  # (batch, 1), (batch, max_contexts)
+            entities_input, start_terminal_input, path_input, end_terminal_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
 
-            weighted_average_contexts, attention_weights = self.calculate_weighted_contexts(words_vocab, paths_vocab,
-                                                                                            attention_param,
-                                                                                            source_input, path_input,
-                                                                                            target_input,
-                                                                                            valid_mask, True)
+            weighted_average_contexts, attention_weights = \
+                self.calculate_weighted_contexts(tokens_vocab, paths_vocab, attention_param, start_terminal_input,
+                                                 path_input, end_terminal_input, valid_mask, True)
 
-        cos = tf.matmul(weighted_average_contexts, target_words_vocab)
+        cos = tf.matmul(weighted_average_contexts, entities_vocab)
 
-        topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.config.TARGET_VOCAB_SIZE))
+        topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.config.ENTITIES_VOCAB_SIZE))
         top_indices = tf.to_int64(topk_candidates.indices)
-        original_words = words_input
+        original_entities = entities_input
         top_scores = topk_candidates.values
         if normalize_scores:
             top_scores = tf.nn.softmax(top_scores)
 
-        return top_scores, original_words, attention_weights, source_string, path_string, path_target_string
+        return top_indices, top_scores, original_entities, attention_weights
 
     def predict(self, predict_data_lines):
         if self.predict_queue is None:
             self.predict_queue = PathContextReader.PathContextReader(config=self.config, is_evaluating=True)
             self.predict_placeholder = self.predict_queue.get_input_placeholder()
-            self.predict_top_values_op, self.predict_original_names_op, self.attention_weights_op, \
-            self.predict_source_string, self.predict_path_string, self.predict_path_target_string = \
+            self.predict_top_indices_op, self.predict_top_scores_op, \
+            self.predict_original_entities_op, self.attention_weights_op = \
                 self.build_test_graph(self.predict_queue.get_filtered_batches(), normalize_scores=True)
 
             self.initialize_session_variables(self.sess)
@@ -371,27 +376,27 @@ class Model:
         self.paths = loader.load_paths()
         print('Dataset information loaded.')
 
-    def save_word2vec_format(self, dest, source):
-        with tf.variable_scope('model', reuse=True):
-            if source is VocabType.Token:
-                vocab_size = self.word_vocab_size
-                embedding_size = self.config.EMBEDDINGS_SIZE
-                index = self.index_to_word
-                var_name = 'WORDS_VOCAB'
-            elif source is VocabType.Target:
-                vocab_size = self.target_word_vocab_size
-                embedding_size = self.config.EMBEDDINGS_SIZE * 3
-                index = self.index_to_target_word
-                var_name = 'TARGET_WORDS_VOCAB'
-            else:
-                raise ValueError('vocab type should be VocabType.Token or VocabType.Target.')
-            embeddings = tf.get_variable(var_name, shape=(vocab_size + 1, embedding_size), dtype=tf.float32,
-                                         trainable=False)
-            self.saver = tf.train.Saver()
-            self.load_model(self.sess)
-            np_embeddings = self.sess.run(embeddings)
-        with open(dest, 'w') as words_file:
-            common.save_word2vec_file(words_file, vocab_size, embedding_size, index, np_embeddings)
+    # def save_word2vec_format(self, dest, source):
+    #     with tf.variable_scope('model', reuse=True):
+    #         if source is VocabType.Token:
+    #             vocab_size = self.word_vocab_size
+    #             embedding_size = self.config.EMBEDDINGS_SIZE
+    #             index = self.index_to_word
+    #             var_name = 'WORDS_VOCAB'
+    #         elif source is VocabType.Target:
+    #             vocab_size = self.target_word_vocab_size
+    #             embedding_size = self.config.EMBEDDINGS_SIZE * 3
+    #             index = self.index_to_target_word
+    #             var_name = 'TARGET_WORDS_VOCAB'
+    #         else:
+    #             raise ValueError('vocab type should be VocabType.Token or VocabType.Target.')
+    #         embeddings = tf.get_variable(var_name, shape=(vocab_size + 1, embedding_size), dtype=tf.float32,
+    #                                      trainable=False)
+    #         self.saver = tf.train.Saver()
+    #         self.load_model(self.sess)
+    #         np_embeddings = self.sess.run(embeddings)
+    #     with open(dest, 'w') as words_file:
+    #         common.save_word2vec_file(words_file, vocab_size, embedding_size, index, np_embeddings)
 
     @staticmethod
     def initialize_session_variables(sess):
