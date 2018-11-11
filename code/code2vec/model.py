@@ -140,7 +140,8 @@ class Model:
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
-            confuse_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.int32)
+            confuse_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE),
+                                      dtype=np.int32)
             rank_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.float32)
             class_sizes = np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
 
@@ -241,6 +242,28 @@ class Model:
                 output_file.write('No results for predicting: ' + str(original_entity))
         return num_correct_predictions
 
+    def get_attention_net(self):
+        attention_net = {
+            'w1': tf.get_variable('ATTENTION_W1',
+                                  shape=(self.config.EMBEDDINGS_SIZE * 3,
+                                         self.config.EMBEDDINGS_SIZE),
+                                  initializer=tf.random_normal_initializer(),
+                                  dtype=tf.float32),
+            'b1': tf.get_variable('ATTENTION_B1',
+                                  shape=(self.config.EMBEDDINGS_SIZE),
+                                  initializer=tf.constant_initializer(0.),
+                                  dtype=tf.float32),
+            'w2': tf.get_variable('ATTENTION_W2',
+                                  shape=(self.config.EMBEDDINGS_SIZE, 1),
+                                  initializer=tf.random_normal_initializer(),
+                                  dtype=tf.float32),
+            'b2': tf.get_variable('ATTENTION_B2',
+                                  shape=(1),
+                                  initializer=tf.constant_initializer(0.),
+                                  dtype=tf.float32)
+        }
+        return attention_net
+
     def build_training_graph(self, input_tensors):
         entities_input, start_terminal_input, path_input, end_terminal_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
 
@@ -258,18 +281,18 @@ class Model:
                                              initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
                                                                                                         mode='FAN_OUT',
                                                                                                         uniform=True))
-            attention_param = tf.get_variable('ATTENTION',
-                                              shape=(self.config.EMBEDDINGS_SIZE * 3, 1), dtype=tf.float32)
+            paths_vocab = tf.get_variable('PATHS_VOCAB', shape=(
+                self.config.PATHS_VOCAB_SIZE + 1,
+                self.config.EMBEDDINGS_SIZE), dtype=tf.float32,
+                                          initializer=tf.contrib.layers.variance_scaling_initializer(
+                                              factor=1.0,
+                                              mode='FAN_OUT',
+                                              uniform=True))
 
-            paths_vocab = tf.get_variable('PATHS_VOCAB',
-                                          shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
-                                          dtype=tf.float32,
-                                          initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0,
-                                                                                                     mode='FAN_OUT',
-                                                                                                     uniform=True))
+            attention_net = self.get_attention_net()
 
             weighted_average_contexts, _ = self.calculate_weighted_contexts(
-                tokens_vocab, paths_vocab, attention_param, start_terminal_input, path_input, end_terminal_input,
+                tokens_vocab, paths_vocab, attention_net, start_terminal_input, path_input, end_terminal_input,
                 valid_mask)
 
             logits = tf.matmul(weighted_average_contexts, entities_vocab, transpose_b=True)
@@ -282,7 +305,7 @@ class Model:
 
         return optimizer, loss
 
-    def calculate_weighted_contexts(self, tokens_vocab, paths_vocab, attention_param, start_terminal_input, path_input,
+    def calculate_weighted_contexts(self, tokens_vocab, paths_vocab, attention_net, start_terminal_input, path_input,
                                     end_terminal_input, valid_mask, is_evaluating=False):
         keep_prob1 = 0.75
         max_contexts = self.config.MAX_CONTEXTS
@@ -305,8 +328,12 @@ class Model:
 
         flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * max_contexts, dim * 3)
 
-        contexts_weights = tf.matmul(flat_embed, attention_param)  # (batch * max_contexts, 1)
-        batched_contexts_weights = tf.reshape(contexts_weights,
+        context_weights_1 = tf.nn.tanh(
+            tf.matmul(flat_embed, attention_net['w1']) + attention_net['b1'])  # (batch * max_contexts, dim)
+        context_weights_2 = tf.matmul(context_weights_1, attention_net['w2']) + attention_net[
+            'b2']  # (batch * max_contexts, 1)
+
+        batched_contexts_weights = tf.reshape(context_weights_2,
                                               [-1, max_contexts, 1])  # (batch, max_contexts, 1)
         mask = tf.log(valid_mask)  # (batch, max_contexts)
         mask = tf.expand_dims(mask, axis=2)  # (batch, max_contexts, 1)
@@ -331,20 +358,17 @@ class Model:
                                                  self.config.EMBEDDINGS_SIZE * 3),
                                              dtype=tf.float32, trainable=False)
 
-            attention_param = tf.get_variable('ATTENTION',
-                                              shape=(self.config.EMBEDDINGS_SIZE * 3, 1),
-                                              dtype=tf.float32, trainable=False)
-
             paths_vocab = tf.get_variable('PATHS_VOCAB',
                                           shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32, trainable=False)
 
+            attention_net = self.get_attention_net()
             entities_vocab = tf.transpose(entities_vocab)  # (dim, word_vocab+1)
 
             entities_input, start_terminal_input, path_input, end_terminal_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
 
             weighted_average_contexts, attention_weights = \
-                self.calculate_weighted_contexts(tokens_vocab, paths_vocab, attention_param, start_terminal_input,
+                self.calculate_weighted_contexts(tokens_vocab, paths_vocab, attention_net, start_terminal_input,
                                                  path_input, end_terminal_input, valid_mask, True)
 
         cos = tf.matmul(weighted_average_contexts, entities_vocab)
