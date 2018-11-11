@@ -3,8 +3,7 @@ import tensorflow as tf
 import PathContextReader
 import numpy as np
 import time
-import pickle
-from common import common, VocabType
+from common import common
 from loader import Loader
 
 
@@ -84,6 +83,9 @@ class Model:
                                   ': precision: ' + str(p) +
                                   ', recall: ' + str(r) +
                                   ', F1: ' + str(f))
+                        print('Mean precision: ' + str(np.mean(precision)) +
+                              ', mean recall: ' + str(np.mean(recall)) +
+                              ', mean F1: ' + str(np.mean(f1)))
 
             except tf.errors.OutOfRangeError:
                 print('Done training')
