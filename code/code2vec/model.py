@@ -76,11 +76,12 @@ class Model:
                         save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
                         self.save_model(self.sess, save_target)
                         print('Saved after %d epochs in: %s' % (epoch_num, save_target))
-                        # results, precision, recall, f1 = self.evaluate()
-                        results = self.evaluate()
+                        results, precision, recall, f1 = self.evaluate()
                         print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
-                        # print('After ' + str(epoch_num) + ' epochs: Precision: ' + str(precision) + ', recall: ' + str(
-                        #     recall) + ', F1: ' + str(f1))
+                        print('Per class statistics after ' + str(epoch_num) + 'epochs:')
+                        for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
+                            print('Class ' + str(i + 1) + ': precision: ' + str(precision) + ', recall: ' + str(recall) + ', F1: ' + str(f1))
+
             except tf.errors.OutOfRangeError:
                 print('Done training')
 
@@ -126,7 +127,11 @@ class Model:
             num_correct_predictions = np.zeros(self.topk)
             total_predictions = 0
             total_prediction_batches = 0
-            # true_positive, false_positive, false_negative = 0, 0, 0
+            true_positive, false_positive, false_negative = \
+                np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
+                np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
+                np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
+
             start_time = time.time()
 
             for batch in common.split_to_batches(self.eval_data_lines, self.config.TEST_BATCH_SIZE):
@@ -138,9 +143,9 @@ class Model:
 
                 num_correct_predictions = self.update_correct_predictions(num_correct_predictions, output_file,
                                                                           zip(original_entities, top_indices))
-                # true_positive, false_positive, false_negative = self.update_per_subtoken_statistics(
-                #     zip(original_entities, top_indices),
-                #     true_positive, false_positive, false_negative)
+                true_positive, false_positive, false_negative = \
+                    self.update_per_class_stats(zip(original_entities, top_indices),
+                                                true_positive, false_positive, false_negative)
 
                 total_predictions += len(original_entities)
                 total_prediction_batches += 1
@@ -154,25 +159,21 @@ class Model:
             output_file.write(str(num_correct_predictions / total_predictions) + '\n')
 
         elapsed = int(time.time() - eval_start_time)
-        # precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
+        precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
         print("Evaluation time: %sH:%sM:%sS" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
         del self.eval_data_lines
         self.eval_data_lines = None
-        return num_correct_predictions / total_predictions#, precision, recall, f1
+        return num_correct_predictions / total_predictions, precision, recall, f1
 
-    def update_per_subtoken_statistics(self, results, true_positive, false_positive, false_negative):
-        for original_name, top_words in results:
-            prediction = common.filter_impossible_names(top_words)[0]
-            original_subtokens = common.get_subtokens(original_name)
-            predicted_subtokens = common.get_subtokens(prediction)
-            for subtok in predicted_subtokens:
-                if subtok in original_subtokens:
-                    true_positive += 1
-                else:
-                    false_positive += 1
-            for subtok in original_subtokens:
-                if not subtok in predicted_subtokens:
-                    false_negative += 1
+    @staticmethod
+    def update_per_class_stats(results, true_positive, false_positive, false_negative):
+        for original_entity, top_indices in results:
+            prediction = top_indices[0]
+            if prediction == original_entity:
+                true_positive[prediction - 1] += 1
+            else:
+                false_positive[prediction - 1] += 1
+                false_negative[original_entity - 1] += 1
         return true_positive, false_positive, false_negative
 
     @staticmethod
@@ -195,7 +196,8 @@ class Model:
             predicted_something = False
             for i, predicted_author in enumerate(top_indices):
                 if i == 0:
-                    output_file.write('Original: ' + str(original_entity) + ', predicted 1st: ' + str(predicted_author) + '\n')
+                    output_file.write(
+                        'Original: ' + str(original_entity) + ', predicted 1st: ' + str(predicted_author) + '\n')
                 predicted_something = True
                 if original_entity == predicted_author:
                     output_file.write('\t\t predicted correctly at rank: ' + str(i + 1) + '\n')
