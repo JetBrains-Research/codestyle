@@ -142,6 +142,7 @@ class Model:
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
             confuse_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.int32)
             rank_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.float32)
+            class_sizes = np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
 
             start_time = time.time()
 
@@ -159,7 +160,7 @@ class Model:
                                                 true_positive, false_positive, false_negative)
 
                 confuse_matrix = self.compute_confuse_matrix(zip(original_entities, top_indices), confuse_matrix)
-                rank_matrix = self.compute_rank_matrix(zip(original_entities, top_indices), rank_matrix)
+                rank_matrix = self.compute_rank_matrix(zip(original_entities, top_indices), rank_matrix, class_sizes)
 
                 total_predictions += len(original_entities)
                 total_prediction_batches += 1
@@ -172,12 +173,15 @@ class Model:
             print('Done testing, epoch reached')
             output_file.write(str(num_correct_predictions / total_predictions) + '\n')
 
+        for i, size in enumerate(class_sizes):
+            rank_matrix[i] /= size
         elapsed = int(time.time() - eval_start_time)
         precision, recall, f1 = self.calculate_results(true_positive, false_positive, false_negative)
         print("Evaluation time: %sH:%sM:%sS" % ((elapsed // 60 // 60), (elapsed // 60) % 60, elapsed % 60))
         del self.eval_data_lines
         self.eval_data_lines = None
-        return num_correct_predictions / total_predictions, precision, recall, f1, confuse_matrix, rank_matrix / total_predictions
+
+        return num_correct_predictions / total_predictions, precision, recall, f1, confuse_matrix, rank_matrix
 
     @staticmethod
     def update_per_class_stats(results, true_positive, false_positive, false_negative):
@@ -198,8 +202,9 @@ class Model:
         return confuse_matrix
 
     @staticmethod
-    def compute_rank_matrix(results, rank_matrix):
+    def compute_rank_matrix(results, rank_matrix, class_sizes):
         for original_entity, top_indices in results:
+            class_sizes[original_entity - 1] += 1
             for i, prediction in enumerate(top_indices):
                 rank_matrix[original_entity - 1][prediction - 1] += i + 1
         return rank_matrix
