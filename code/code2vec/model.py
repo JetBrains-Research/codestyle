@@ -247,7 +247,6 @@ class Model:
             'w1': tf.get_variable('ATTENTION_W1',
                                   shape=(self.config.EMBEDDINGS_SIZE * 3,
                                          1),
-                                  initializer=tf.random_normal_initializer(),
                                   dtype=tf.float32),
             'b1': tf.get_variable('ATTENTION_B1',
                                   shape=(self.config.EMBEDDINGS_SIZE),
