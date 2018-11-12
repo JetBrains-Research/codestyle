@@ -51,6 +51,7 @@ class Model:
         self.queue_thread = PathContextReader.PathContextReader(config=self.config)
         optimizer, train_loss = self.build_training_graph(self.queue_thread.input_tensors())
         self.saver = tf.train.Saver(max_to_keep=self.config.MAX_TO_KEEP)
+        self.summary_writer = tf.summary.FileWriter('logs/', graph=self.sess.graph)
 
         self.initialize_session_variables(self.sess)
         print('Initalized variables')
@@ -257,16 +258,24 @@ class Model:
 
         return tokens_vocab, entities_vocab, paths_vocab
 
+    def create_dicts(self, starts, paths, ends, mask):
+        return {'starts': starts,
+                'paths': paths,
+                'ends': ends,
+                'mask': mask}
+
     def build_training_graph(self, input_tensors):
-        entities_input, start_terminal_input, path_input, end_terminal_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
+        entities_input, \
+        added_starts, added_paths, added_ends, added_mask, \
+        deleted_starts, deleted_paths, deleted_ends, deleted_mask = input_tensors  # (batch, 1), (batch, max_contexts)
+        added = self.create_dicts(added_starts, added_paths, added_ends, added_mask)
+        deleted = self.create_dicts(deleted_starts, deleted_paths, deleted_ends, deleted_mask)
 
         with tf.variable_scope('model'):
             initializer = tf.contrib.layers.variance_scaling_initializer(factor=1.0, mode='FAN_OUT', uniform=True)
             tokens_vocab, entities_vocab, paths_vocab = self.get_vocabs(initializer=initializer)
 
-            weighted_average_contexts, _ = self.calculate_weighted_contexts(
-                tokens_vocab, paths_vocab, start_terminal_input, path_input, end_terminal_input,
-                valid_mask)
+            weighted_average_contexts, _ = self.calculate_weighted_contexts(tokens_vocab, paths_vocab, added, deleted)
 
             logits = tf.matmul(weighted_average_contexts, entities_vocab, transpose_b=True)
             batch_size = tf.to_float(tf.shape(entities_input)[0])
@@ -282,10 +291,13 @@ class Model:
         with tf.variable_scope('model', reuse=self.get_should_reuse_variables()):
             tokens_vocab, entities_vocab, paths_vocab = self.get_vocabs(trainable=False)
             entities_vocab = tf.transpose(entities_vocab)  # (dim, word_vocab + 1)
-            entities_input, start_terminal_input, path_input, end_terminal_input, valid_mask = input_tensors  # (batch, 1), (batch, max_contexts)
+            entities_input, \
+            added_starts, added_paths, added_ends, added_mask, \
+            deleted_starts, deleted_paths, deleted_ends, deleted_mask = input_tensors
+            added = self.create_dicts(added_starts, added_paths, added_ends, added_mask)
+            deleted = self.create_dicts(deleted_starts, deleted_paths, deleted_ends, deleted_mask)
             weighted_average_contexts, attention_weights = \
-                self.calculate_weighted_contexts(tokens_vocab, paths_vocab, start_terminal_input,
-                                                 path_input, end_terminal_input, valid_mask, is_evaluating=True)
+                self.calculate_weighted_contexts(tokens_vocab, paths_vocab, added, deleted, is_evaluating=True)
 
         cos = tf.matmul(weighted_average_contexts, entities_vocab)
 
@@ -298,42 +310,49 @@ class Model:
 
         return top_indices, top_scores, original_entities, attention_weights
 
-    def calculate_weighted_contexts(self, tokens_vocab, paths_vocab, start_terminal_input, path_input,
-                                    end_terminal_input, valid_mask, is_evaluating=False):
+    def calculate_weighted_contexts(self, tokens_vocab, paths_vocab, added, deleted, is_evaluating=False):
         keep_prob1 = 0.75
         max_contexts = self.config.MAX_CONTEXTS
         trainable = not is_evaluating
 
-        start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=start_terminal_input)  # (batch, max_contexts, dim)
-        path_embed = tf.nn.embedding_lookup(params=paths_vocab, ids=path_input)  # (batch, max_contexts, dim)
-        end_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=end_terminal_input)  # (batch, max_contexts, dim)
+        starts = tf.concat([added['starts'], deleted['starts']], axis=1)  # (batch, 2 * max_contexts, 1)
+        paths = tf.concat([added['paths'], deleted['paths']], axis=1)  # (batch, 2 * max_contexts, 1)
+        ends = tf.concat([added['ends'], deleted['ends']], axis=1)  # (batch, 2 * max_contexts, 1)
+        valid_mask = tf.concat([added['mask'], deleted['mask']], axis=1)  # (batch, 2 * max_contexts)
 
-        context_embed = tf.concat([start_token_embed, path_embed, end_token_embed], axis=-1)  # (batch, max_contexts, dim * 3)
+        start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=starts)  # (batch, 2 * max_contexts, dim)
+        path_embed = tf.nn.embedding_lookup(params=paths_vocab, ids=paths)  # (batch, 2 * max_contexts, dim)
+        end_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=ends)  # (batch, 2 * max_contexts, dim)
+
+        context_embed = tf.concat([start_token_embed, path_embed, end_token_embed], axis=-1)  # (batch, 2 * max_contexts, dim * 3)
 
         if not is_evaluating:
             context_embed = tf.nn.dropout(context_embed, keep_prob1)
 
-        flat_embed = tf.reshape(context_embed, [-1, self.config.EMBEDDINGS_SIZE * 3])  # (batch * max_contexts, dim * 3)
+        flat_embed = tf.reshape(context_embed, [-1, self.config.EMBEDDINGS_SIZE * 3])  # (batch * 2 * max_contexts, dim * 3)
         transform_param = tf.get_variable('TRANSFORM',
                                           shape=(self.config.EMBEDDINGS_SIZE * 3, self.config.EMBEDDINGS_SIZE * 3),
                                           dtype=tf.float32, trainable=trainable)
 
-        flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * max_contexts, dim * 3)
+        flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * 2 * max_contexts, dim * 3)
 
-        contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE,
-                                     activation=tf.nn.tanh, trainable=trainable) # (batch * max_contexts, dim)
-        contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 4,
-                                     activation=tf.nn.tanh, trainable=trainable) # (batch * max_contexts, dim // 4)
-        contexts_out = tf.layers.dense(contexts_2, 1,
-                                       activation=None, trainable=trainable) # (batch * max_contexts, 1)
+        contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE, activation=tf.nn.tanh,
+                                     name='ATTENTION_1', trainable=trainable) # (batch * 2 * max_contexts, dim)
+        contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 4, activation=tf.nn.tanh,
+                                     name='ATTENTION_2', trainable=trainable) # (batch * 2 * max_contexts, dim // 4)
+        contexts_out = tf.layers.dense(contexts_2, 1, activation=None,
+                                       name='ATTENTION_OUT', trainable=trainable) # (batch * 2 * max_contexts, 1)
 
-        batched_contexts_weights = tf.reshape(contexts_out, [-1, max_contexts, 1])  # (batch, max_contexts, 1)
-        mask = tf.log(valid_mask)  # (batch, max_contexts)
-        mask = tf.expand_dims(mask, axis=2)  # (batch, max_contexts, 1)
-        batched_contexts_weights += mask  # (batch, max_contexts, 1)
+        batched_contexts_weights = tf.reshape(contexts_out, [-1, 2 * max_contexts, 1])  # (batch, 2 * max_contexts, 1)
+        mask = tf.log(valid_mask)  # (batch, 2 * max_contexts)
+        mask = tf.expand_dims(mask, axis=2)  # (batch, 2 * max_contexts, 1)
+        batched_contexts_weights += mask  # (batch, 2 * max_contexts, 1)
         attention_weights = tf.nn.softmax(batched_contexts_weights, axis=1)  # (batch, max_contexts, 1)
 
-        batched_embed = tf.reshape(flat_embed, shape=[-1, max_contexts, self.config.EMBEDDINGS_SIZE * 3])
+        batched_embed = tf.reshape(flat_embed, shape=[-1, 2 * max_contexts, self.config.EMBEDDINGS_SIZE * 3])
+        added_embed, deleted_embed = tf.split(batched_embed, 2, axis=1)
+        deleted_embed *= -1
+        batched_embed = tf.concat([added_embed, deleted_embed], axis=1)
         weighted_average_contexts = tf.reduce_sum(tf.multiply(batched_embed, attention_weights),
                                                   axis=1)  # (batch, dim * 3)
 
