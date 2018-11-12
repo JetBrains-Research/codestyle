@@ -28,16 +28,18 @@ test_data = []
 
 
 def create_line(entity, added, deleted):
-    return str(entity) + ',' + \
-           ','.join(added) + ',' * (count_max - len(added)) + \
+    return str(entity) + \
            ',' + \
-           ','.join(deleted) + ',' * (count_max - len(deleted)) + \
+           ','.join(added) + ',' * (count_max - max(1, len(added))) + \
+           ',' + \
+           ','.join(deleted) + ',' * (count_max - max(1, len(deleted))) + \
            '\n'
 
 
 for l, r in buckets:
     with open(get_file(path2creations, l, r), 'r') as fin:
         for line in fin:
+            line = line[:-1]
             entity, paths = line.split(',')
             paths = paths.split(';')
             if len(paths) > path_limit or len(paths) < 6:
@@ -53,6 +55,7 @@ for l, r in buckets:
 for l, r in buckets:
     with open(get_file(path2deletions, l, r), 'r') as fin:
         for line in fin:
+            line = line[:-1]
             entity, paths = line.split(',')
             paths = paths.split(';')
             if len(paths) > path_limit or len(paths) < 6:
@@ -68,6 +71,7 @@ for l, r in buckets:
 for l, r in buckets:
     with open(get_file(path2changes, l, r), 'r') as fin:
         for line in fin:
+            line = line[:-1]
             entity, added, deleted = line.split(',')
             added = added.split(';')
             deleted = deleted.split(';')
