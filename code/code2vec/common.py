@@ -22,7 +22,7 @@ class Config:
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 128
         config.MAX_TO_KEEP = 10
-        config.NUM_EXAMPLES = 165690
+        config.NUM_EXAMPLES = 554702
         config.DATASET_FOLDER = 'dataset/'
         # Automatically filled, do not edit:
         config.TRAIN_PATH = args.data_path
