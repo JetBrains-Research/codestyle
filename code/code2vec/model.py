@@ -252,12 +252,15 @@ class Model:
                                   initializer=tf.constant_initializer(0.),
                                   dtype=tf.float32),
             'w2': tf.get_variable('ATTENTION_W2',
-                                  shape=(self.config.EMBEDDINGS_SIZE, 1),
+                                  shape=(self.config.EMBEDDINGS_SIZE, self.config.EMBEDDINGS_SIZE // 4),
                                   dtype=tf.float32),
             'b2': tf.get_variable('ATTENTION_B2',
-                                  shape=(1),
+                                  shape=(self.config.EMBEDDINGS_SIZE // 4),
                                   initializer=tf.constant_initializer(0.),
-                                  dtype=tf.float32)
+                                  dtype=tf.float32),
+            'w_out': tf.get_variable('ATTENTION_W_OUT',
+                                     shape=(self.config.EMBEDDINGS_SIZE // 4, 1),
+                                     dtype=tf.float32)
         }
         return attention_net
 
@@ -325,10 +328,12 @@ class Model:
 
         flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * max_contexts, dim * 3)
 
-        context_weights_1 = tf.nn.tanh(
+        context_weights_1 = tf.nn.relu(
             tf.matmul(flat_embed, attention_net['w1']) + attention_net['b1'])  # (batch * max_contexts, dim)
-        context_weights_2 = tf.matmul(context_weights_1, attention_net['w2'])  # (batch * max_contexts, 1)
-        batched_contexts_weights = tf.reshape(context_weights_2,
+        context_weights_2 = tf.nn.relu(
+            tf.matmul(context_weights_1, attention_net['w2']) + attention_net['b2'])  # (batch * max_contexts, dim // 4)
+        context_weights_out = tf.matmul(context_weights_2, attention_net['w_out'])  # (batch * max_contexts, 1)
+        batched_contexts_weights = tf.reshape(context_weights_out,
                                               [-1, max_contexts, 1])  # (batch, max_contexts, 1)
         mask = tf.log(valid_mask)  # (batch, max_contexts)
         mask = tf.expand_dims(mask, axis=2)  # (batch, max_contexts, 1)
