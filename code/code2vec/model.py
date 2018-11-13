@@ -78,11 +78,11 @@ class Model:
                         print('Saved after %d epochs in: %s' % (epoch_num, save_target))
                         print('------------------------------------')
                         print('Results of evaluation on test data:')
-                        self.evaluate_and_print_results(self.config.TEST_PATH)
+                        self.evaluate_and_print_results(self.config.TEST_PATH, epoch_num)
                         print('------------------------------------')
                         print('------------------------------------')
                         print('Results of evaluation on train data:')
-                        self.evaluate_and_print_results(self.config.TRAIN_PATH)
+                        self.evaluate_and_print_results(self.config.TRAIN_PATH, epoch_num)
                         print('------------------------------------')
 
             except tf.errors.OutOfRangeError:
@@ -178,7 +178,7 @@ class Model:
 
         return num_correct_predictions / total_predictions, precision, recall, f1, confuse_matrix, rank_matrix
 
-    def evaluate_and_print_results(self, file_path):
+    def evaluate_and_print_results(self, file_path, epoch_num):
         results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate(file_path)
         print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
         print('Per class statistics after ' + str(epoch_num) + ' epochs:')
