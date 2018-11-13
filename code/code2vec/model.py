@@ -48,7 +48,7 @@ class Model:
         num_batches_to_evaluate = max(int(
             self.config.NUM_EXAMPLES / self.config.BATCH_SIZE * self.config.SAVE_EVERY_EPOCHS), 1)
 
-        self.queue_thread = PathContextReader.PathContextReader(config=self.config)
+        self.queue_thread = PathContextReader.PathContextReader(config=self.config, file_path=self.config.TRAIN_PATH)
         optimizer, train_loss = self.build_training_graph(self.queue_thread.input_tensors())
         self.saver = tf.train.Saver(max_to_keep=self.config.MAX_TO_KEEP)
         self.summary_writer = tf.summary.FileWriter('logs/', graph=self.sess.graph)
@@ -371,7 +371,7 @@ class Model:
 
     def predict(self, predict_data_lines):
         if self.predict_queue is None:
-            self.predict_queue = PathContextReader.PathContextReader(config=self.config, is_evaluating=True)
+            self.predict_queue = PathContextReader.PathContextReader(config=self.config, file_path=self.config.TEST_PATH, is_evaluating=True)
             self.predict_placeholder = self.predict_queue.get_input_placeholder()
             self.predict_top_indices_op, self.predict_top_scores_op, \
             self.predict_original_entities_op, self.attention_weights_op = \
