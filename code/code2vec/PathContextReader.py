@@ -10,8 +10,9 @@ class PathContextReader:
     class_target_word_table = None
     class_path_table = None
 
-    def __init__(self, config, is_evaluating=False):
-        self.file_path = config.TEST_PATH if is_evaluating else config.TRAIN_PATH
+    def __init__(self, config, file_path, is_evaluating=False):
+        # self.file_path = config.TEST_PATH if is_evaluating else config.TRAIN_PATH
+        self.file_path = file_path
         self.batch_size = min(config.TEST_BATCH_SIZE if is_evaluating else config.BATCH_SIZE, config.NUM_EXAMPLES)
         self.num_epochs = config.NUM_EPOCHS
         self.reading_batch_size = min(config.READING_BATCH_SIZE, config.NUM_EXAMPLES)

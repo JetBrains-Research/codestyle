@@ -76,21 +76,14 @@ class Model:
                         save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
                         self.save_model(self.sess, save_target)
                         print('Saved after %d epochs in: %s' % (epoch_num, save_target))
-                        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate()
-                        print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
-                        print('Per class statistics after ' + str(epoch_num) + ' epochs:')
-                        for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
-                            print('Class ' + str(i + 1) +
-                                  ': precision: ' + str(p) +
-                                  ', recall: ' + str(r) +
-                                  ', F1: ' + str(f))
-                        print('Mean precision: ' + str(np.mean(precision)) +
-                              ', mean recall: ' + str(np.mean(recall)) +
-                              ', mean F1: ' + str(np.mean(f1)))
-                        print('Confuse matrix:')
-                        print(confuse_matrix)
-                        print('Rank matrix:')
-                        print(rank_matrix)
+                        print('------------------------------------')
+                        print('Results of evaluation on test data:')
+                        self.evaluate_and_print_results(self.config.TEST_PATH)
+                        print('------------------------------------')
+                        print('------------------------------------')
+                        print('Results of evaluation on train data:')
+                        self.evaluate_and_print_results(self.config.TRAIN_PATH)
+                        print('------------------------------------')
 
             except tf.errors.OutOfRangeError:
                 print('Done training')
@@ -109,10 +102,10 @@ class Model:
                                                                               self.config.BATCH_SIZE * self.num_batches_to_log / (
                                                                                   multi_batch_elapsed if multi_batch_elapsed > 0 else 1)))
 
-    def evaluate(self):
+    def evaluate(self, file_path):
         eval_start_time = time.time()
         if self.eval_queue is None:
-            self.eval_queue = PathContextReader.PathContextReader(config=self.config, is_evaluating=True)
+            self.eval_queue = PathContextReader.PathContextReader(config=self.config, file_path=file_path, is_evaluating=True)
             self.eval_placeholder = self.eval_queue.get_input_placeholder()
             self.predict_top_indices_op, self.predict_top_scores_op, \
             self.predict_original_entities_op, self.attention_weights_op = \
@@ -184,6 +177,24 @@ class Model:
         self.eval_data_lines = None
 
         return num_correct_predictions / total_predictions, precision, recall, f1, confuse_matrix, rank_matrix
+
+    def evaluate_and_print_results(self, file_path):
+        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate(file_path)
+        print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
+        print('Per class statistics after ' + str(epoch_num) + ' epochs:')
+        for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
+            print('Class ' + str(i + 1) +
+                  ': precision: ' + str(p) +
+                  ', recall: ' + str(r) +
+                  ', F1: ' + str(f))
+        print('Mean precision: ' + str(np.mean(precision)) +
+              ', mean recall: ' + str(np.mean(recall)) +
+              ', mean F1: ' + str(np.mean(f1)))
+        print('Confuse matrix:')
+        print(confuse_matrix)
+        print('Rank matrix:')
+        print(rank_matrix)
+
 
     @staticmethod
     def update_per_class_stats(results, true_positive, false_positive, false_negative):

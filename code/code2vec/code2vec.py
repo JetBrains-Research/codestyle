@@ -44,7 +44,7 @@ if __name__ == '__main__':
         model.save_word2vec_format(args.save_t2v, source=VocabType.Target)
         print('Target word vectors saved in word2vec text format in: %s' % args.save_t2v)
     if config.TEST_PATH and not args.data_path:
-        eval_results = model.evaluate()
+        eval_results = model.evaluate(config.TEST_PATH)
         if eval_results is not None:
             results, precision, recall, f1, confuse_matrix, rank_matrix = eval_results
             print(results)
