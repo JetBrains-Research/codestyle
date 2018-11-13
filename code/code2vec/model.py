@@ -122,9 +122,9 @@ class Model:
                 return None
 
         if self.eval_data_lines is None:
-            print('Loading test data from: ' + self.config.TEST_PATH)
-            self.eval_data_lines = common.load_file_lines(self.config.TEST_PATH)
-            print('Done loading test data')
+            print('Loading evaluation data from: ' + file_path)
+            self.eval_data_lines = common.load_file_lines(file_path)
+            print('Done loading evaluation data')
 
         with open('log.txt', 'w') as output_file:
             num_correct_predictions = np.zeros(self.topk)
