@@ -342,16 +342,16 @@ class Model:
 
         flat_embed = tf.reshape(context_embed, [-1, self.config.EMBEDDINGS_SIZE * 3])  # (batch * 2 * max_contexts, dim * 3)
         transform_param = tf.get_variable('TRANSFORM',
-                                          shape=(self.config.EMBEDDINGS_SIZE * 3, self.config.EMBEDDINGS_SIZE * 3),
+                                          shape=(self.config.EMBEDDINGS_SIZE * 3, self.config.EMBEDDINGS_SIZE),
                                           dtype=tf.float32, trainable=trainable)
 
         flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * 2 * max_contexts, dim * 3)
 
-        contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE, activation=tf.nn.tanh,
+        contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
                                      name='ATTENTION_1', trainable=trainable) # (batch * 2 * max_contexts, dim)
-        contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 4, activation=tf.nn.tanh,
-                                     name='ATTENTION_2', trainable=trainable) # (batch * 2 * max_contexts, dim // 4)
-        contexts_out = tf.layers.dense(contexts_2, 1, activation=None,
+        # contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
+        #                              name='ATTENTION_2', trainable=trainable) # (batch * 2 * max_contexts, dim // 4)
+        contexts_out = tf.layers.dense(contexts_1, 1, activation=None,
                                        name='ATTENTION_OUT', trainable=trainable) # (batch * 2 * max_contexts, 1)
 
         batched_contexts_weights = tf.reshape(contexts_out, [-1, 2 * max_contexts, 1])  # (batch, 2 * max_contexts, 1)
