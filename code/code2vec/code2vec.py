@@ -6,7 +6,7 @@ import sys
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("-sz", "--size", help="train size", required=True)
+    parser.add_argument("-sz", "--size", help="train size", type=int, required=True)
     parser.add_argument("-d", "--data", dest="data_path",
                         help="path to preprocessed dataset", required=False)
     parser.add_argument("-te", "--test", dest="test_path",
