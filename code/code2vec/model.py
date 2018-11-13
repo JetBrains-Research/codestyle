@@ -260,7 +260,7 @@ class Model:
                                        dtype=tf.float32, initializer=initializer, trainable=trainable)
 
         entities_vocab = tf.get_variable('ENTITIES_VOCAB',
-                                         shape=(self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE * 3),
+                                         shape=(self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                          dtype=tf.float32, initializer=initializer, trainable=trainable)
 
         paths_vocab = tf.get_variable('PATHS_VOCAB',
