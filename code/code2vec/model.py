@@ -362,10 +362,10 @@ class Model:
 
         batched_embed = tf.reshape(flat_embed, shape=[-1, 2 * max_contexts, self.config.EMBEDDINGS_SIZE])
         added_embed, deleted_embed = tf.split(batched_embed, 2, axis=1)
-        deleted_embed *= -1
+        # deleted_embed *= -1
         batched_embed = tf.concat([added_embed, deleted_embed], axis=1)
         weighted_average_contexts = tf.reduce_sum(tf.multiply(batched_embed, attention_weights),
-                                                  axis=1)  # (batch, dim * 3)
+                                                  axis=1)  # (batch, dim)
 
         return weighted_average_contexts, attention_weights
 
