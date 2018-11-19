@@ -21,18 +21,20 @@ path2train = path2dataset + 'train_all_{}_{}.csv'.format(buckets[0][0], buckets[
 path2test = path2dataset + 'test_all_{}_{}.csv'.format(buckets[0][0], buckets[-1][1])
 
 path_limit = 500
-count_max = 200
+count_max = 500
 
 train_data = []
 test_data = []
 
 
-def create_line(entity, added, deleted):
+def create_line(entity, added, deleted, both):
     return str(entity) + \
            ',' + \
            ','.join(added) + ',' * (count_max - max(1, len(added))) + \
            ',' + \
            ','.join(deleted) + ',' * (count_max - max(1, len(deleted))) + \
+           ',' + \
+           ','.join(both) + ',' * (count_max - max(1, len(both))) + \
            '\n'
 
 
@@ -46,7 +48,7 @@ for l, r in buckets:
                 continue
             if len(paths) > count_max:
                 paths = paths[:count_max]
-            line = create_line(entity, paths, [])
+            line = create_line(entity, paths, [], [])
             if np.random.uniform() < 0.3:
                 test_data.append(line)
             else:
@@ -62,7 +64,7 @@ for l, r in buckets:
                 continue
             if len(paths) > count_max:
                 paths = paths[:count_max]
-            line = create_line(entity, [], paths)
+            line = create_line(entity, [], paths, [])
             if np.random.uniform() < 0.3:
                 test_data.append(line)
             else:
@@ -79,14 +81,18 @@ for l, r in buckets:
             deleted_set = set(deleted)
             filtered_added = []
             filtered_deleted = []
+            filtered_both = []
             for item in added:
                 if item not in deleted_set:
                     filtered_added.append(item)
             for item in deleted:
                 if item not in added_set:
                     filtered_deleted.append(item)
-
+            for item in deleted:
+                if item in added_set:
+                    filtered_both.append(item)
             if len(filtered_added) > path_limit or len(filtered_deleted) > path_limit or \
+                    len(filtered_both) > path_limit or \
                     len(filtered_deleted) + len(filtered_added) < 6:
                 continue
 
@@ -96,7 +102,10 @@ for l, r in buckets:
             if len(filtered_deleted) > count_max:
                 filtered_deleted = filtered_deleted[:count_max]
 
-            line = create_line(entity, filtered_added, filtered_deleted)
+            if len(filtered_both) > count_max:
+                filtered_deleted = filtered_deleted[:count_max]
+
+            line = create_line(entity, filtered_added, filtered_deleted, filtered_both)
             if np.random.uniform() < 0.3:
                 test_data.append(line)
             else:
