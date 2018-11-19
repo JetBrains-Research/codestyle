@@ -20,7 +20,7 @@ class Config:
         config.TOKENS_VOCAB_SIZE = 690708
         config.ENTITIES_VOCAB_SIZE = 10
         config.PATHS_VOCAB_SIZE = 384641
-        config.EMBEDDINGS_SIZE = 128
+        config.EMBEDDINGS_SIZE = 8
         config.MAX_TO_KEEP = 10
         config.DATASET_FOLDER = 'dataset/'
         # Automatically filled, do not edit:
