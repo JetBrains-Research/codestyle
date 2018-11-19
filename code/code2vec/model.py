@@ -260,7 +260,7 @@ class Model:
                                        dtype=tf.float32, initializer=initializer, trainable=trainable)
 
         entities_vocab = tf.get_variable('ENTITIES_VOCAB',
-                                         shape=(self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
+                                         shape=(self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE * 2),
                                          dtype=tf.float32, initializer=initializer, trainable=trainable)
 
         paths_vocab = tf.get_variable('PATHS_VOCAB',
@@ -375,8 +375,7 @@ class Model:
         deleted_context, deleted_weights = process_contexts(deleted, 'DELETED')
         total_context = tf.concat([added_context, deleted_context], axis=1)
         total_weights = tf.concat([added_weights, deleted_weights], axis=1)
-        # return total_context, total_weights
-        return deleted_context, deleted_weights
+        return total_context, total_weights
 
     def predict(self, predict_data_lines):
         if self.predict_queue is None:
