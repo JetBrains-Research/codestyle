@@ -348,9 +348,9 @@ class Model:
         flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * 2 * max_contexts, dim * 3)
 
         contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
-                                     name='ATTENTION_1', trainable=trainable) # (batch * 2 * max_contexts, dim)
-        # contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
-        #                              name='ATTENTION_2', trainable=trainable) # (batch * 2 * max_contexts, dim // 4)
+                                     name='ATTENTION_1', trainable=trainable) # (batch * 2 * max_contexts, dim/2)
+        contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
+                                     name='ATTENTION_2', trainable=trainable)  # (batch * 2 * max_contexts, dim/2)
         contexts_out = tf.layers.dense(contexts_1, 1, activation=None,
                                        name='ATTENTION_OUT', trainable=trainable) # (batch * 2 * max_contexts, 1)
 
@@ -362,7 +362,6 @@ class Model:
 
         batched_embed = tf.reshape(flat_embed, shape=[-1, 2 * max_contexts, self.config.EMBEDDINGS_SIZE])
         added_embed, deleted_embed = tf.split(batched_embed, 2, axis=1)
-        # deleted_embed *= -1
         batched_embed = tf.concat([added_embed, deleted_embed], axis=1)
         weighted_average_contexts = tf.reduce_sum(tf.multiply(batched_embed, attention_weights),
                                                   axis=1)  # (batch, dim)
