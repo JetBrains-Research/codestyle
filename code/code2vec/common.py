@@ -15,8 +15,8 @@ class Config:
         config.READING_BATCH_SIZE = 1300 * 4
         config.NUM_BATCHING_THREADS = 2
         config.BATCH_QUEUE_SIZE = 30000
-        config.MAX_CONTEXTS = 500
-        config.PATH_LIMIT = 500
+        config.MAX_CONTEXTS = 200
+        config.PATH_LIMIT = 200
         config.TOKENS_VOCAB_SIZE = 690708
         config.ENTITIES_VOCAB_SIZE = 10
         config.PATHS_VOCAB_SIZE = 384641

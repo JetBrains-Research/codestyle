@@ -37,22 +37,22 @@ class PathContextReader:
         record_defaults = [[no_such_composite]] * (self.max_contexts * 3 + 1)
         row_parts = tf.decode_csv(row, record_defaults=record_defaults, field_delim=',')
         entities = tf.string_to_number(row_parts[0], out_type=tf.int32)  # (batch, )
-        all_contexts = tf.stack(row_parts[1:(3 * self.max_contexts + 1)], axis=1)  # (batch, 3 * max_contexts)
+        all_contexts = tf.stack(row_parts[1:(2 * self.max_contexts + 1)], axis=1)  # (batch, 2 * max_contexts)
 
-        flat_contexts = tf.reshape(all_contexts, [-1])  # (batch * 3 * max_contexts, )
+        flat_contexts = tf.reshape(all_contexts, [-1])  # (batch * 2 * max_contexts, )
         split_contexts = tf.string_split(flat_contexts, delimiter=' ')
         dense_split_contexts = tf.reshape(tf.sparse_tensor_to_dense(split_contexts,
                                                                     default_value=str(no_such_word)),
-                                          shape=[-1, 3 * self.max_contexts, 3])  # (batch, 3 * max_contexts, 3)
+                                          shape=[-1, 2 * self.max_contexts, 3])  # (batch, 2 * max_contexts, 3)
 
         dense_split_contexts = tf.string_to_number(dense_split_contexts, out_type=tf.int32)
-        starts = tf.slice(dense_split_contexts, [0, 0, 0], [-1, 3 * self.max_contexts, 1])
-        paths = tf.slice(dense_split_contexts, [0, 0, 1], [-1, 3 * self.max_contexts, 1])
-        ends = tf.slice(dense_split_contexts, [0, 0, 2], [-1, 3 * self.max_contexts, 1])
+        starts = tf.slice(dense_split_contexts, [0, 0, 0], [-1, 2 * self.max_contexts, 1])
+        paths = tf.slice(dense_split_contexts, [0, 0, 1], [-1, 2 * self.max_contexts, 1])
+        ends = tf.slice(dense_split_contexts, [0, 0, 2], [-1, 2 * self.max_contexts, 1])
 
-        added_starts, deleted_starts, _ = tf.split(starts, 3, axis=1)
-        added_paths, deleted_paths, _ = tf.split(paths, 3, axis=1)
-        added_ends, deleted_ends, _ = tf.split(ends, 3, axis=1)
+        added_starts, deleted_starts = tf.split(starts, 2, axis=1)
+        added_paths, deleted_paths = tf.split(paths, 2, axis=1)
+        added_ends, deleted_ends = tf.split(ends, 2, axis=1)
 
         return entities, added_starts, added_paths, added_ends, deleted_starts, deleted_paths, deleted_ends
 
