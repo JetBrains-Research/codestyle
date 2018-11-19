@@ -341,7 +341,7 @@ class Model:
                 context_embed = tf.nn.dropout(context_embed, keep_prob1)
 
             flat_embed = tf.reshape(context_embed, [-1, self.config.EMBEDDINGS_SIZE * 3])  # (batch * max_contexts, dim * 3)
-            transform_param = tf.get_variable('TRANSFORM',
+            transform_param = tf.get_variable('TRANSFORM_{}'.format(suffix),
                                               shape=(self.config.EMBEDDINGS_SIZE * 3, self.config.EMBEDDINGS_SIZE),
                                               dtype=tf.float32, trainable=trainable)
 
@@ -353,7 +353,7 @@ class Model:
             # contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
             #                           name='ATTENTION_2', trainable=trainable) # (batch * max_contexts, dim // 4)
             contexts_out = tf.layers.dense(contexts_1, 1, activation=None,
-                                           name='ATTENTION_OUT_'.format(suffix),
+                                           name='ATTENTION_OUT_{}'.format(suffix),
                                            trainable=trainable)  # (batch * max_contexts, 1)
 
             batched_contexts_weights = tf.reshape(contexts_out, [-1, max_contexts, 1])  # (batch, max_contexts, 1)
