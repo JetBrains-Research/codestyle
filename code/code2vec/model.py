@@ -260,7 +260,7 @@ class Model:
                                        dtype=tf.float32, initializer=initializer, trainable=trainable)
 
         entities_vocab = tf.get_variable('ENTITIES_VOCAB',
-                                         shape=(self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE * 2),
+                                         shape=(self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                          dtype=tf.float32, initializer=initializer, trainable=trainable)
 
         paths_vocab = tf.get_variable('PATHS_VOCAB',
@@ -361,6 +361,11 @@ class Model:
             mask = tf.expand_dims(mask, axis=2)  # (batch, max_contexts, 1)
             batched_contexts_weights += mask  # (batch, max_contexts, 1)
             attention_weights = tf.nn.softmax(batched_contexts_weights, axis=1)  # (batch, max_contexts, 1)
+            attention_weights = tf.where(
+                tf.is_nan(attention_weights),
+                tf.zeros_like(attention_weights),
+                attention_weights
+            )
             batched_embed = tf.reshape(flat_embed, shape=[-1, max_contexts, self.config.EMBEDDINGS_SIZE])
             aggregated_contexts = tf.reduce_sum(tf.multiply(batched_embed, attention_weights),
                                                 axis=1)  # (batch, dim)
@@ -370,7 +375,8 @@ class Model:
         deleted_context, deleted_weights = process_contexts(deleted, 'DELETED')
         total_context = tf.concat([added_context, deleted_context], axis=1)
         total_weights = tf.concat([added_weights, deleted_weights], axis=1)
-        return total_context, total_weights
+        # return total_context, total_weights
+        return deleted_context, deleted_weights
 
     def predict(self, predict_data_lines):
         if self.predict_queue is None:
