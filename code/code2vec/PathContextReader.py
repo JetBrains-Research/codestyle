@@ -34,7 +34,7 @@ class PathContextReader:
 
     def read_file(self):
         row = self.get_row_input()
-        record_defaults = [[no_such_composite]] * (self.max_contexts * 3 + 1)
+        record_defaults = [[no_such_composite]] * (self.max_contexts * 2 + 1)
         row_parts = tf.decode_csv(row, record_defaults=record_defaults, field_delim=',')
         entities = tf.string_to_number(row_parts[0], out_type=tf.int32)  # (batch, )
         all_contexts = tf.stack(row_parts[1:(2 * self.max_contexts + 1)], axis=1)  # (batch, 2 * max_contexts)
