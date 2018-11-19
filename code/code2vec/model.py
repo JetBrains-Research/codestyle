@@ -340,7 +340,10 @@ class Model:
             if not is_evaluating:
                 context_embed = tf.nn.dropout(context_embed, keep_prob1)
 
-            flat_embed = tf.reshape(context_embed, [-1, self.config.EMBEDDINGS_SIZE * 3])  # (batch * max_contexts, dim * 3)
+            context_embed_masked = tf.multiply(context_embed, tf.expand_dims(valid_mask, axis=2))
+
+            flat_embed = tf.reshape(context_embed_masked,
+                                    [-1, self.config.EMBEDDINGS_SIZE * 3])  # (batch * max_contexts, dim * 3)
             transform_param = tf.get_variable('TRANSFORM_{}'.format(suffix),
                                               shape=(self.config.EMBEDDINGS_SIZE * 3, self.config.EMBEDDINGS_SIZE),
                                               dtype=tf.float32, trainable=trainable)
@@ -357,16 +360,9 @@ class Model:
                                            trainable=trainable)  # (batch * max_contexts, 1)
 
             batched_contexts_weights = tf.reshape(contexts_out, [-1, max_contexts, 1])  # (batch, max_contexts, 1)
-            mask = tf.log(valid_mask)  # (batch, max_contexts)
-            mask = tf.expand_dims(mask, axis=2)  # (batch, max_contexts, 1)
-            batched_contexts_weights += mask  # (batch, max_contexts, 1)
             attention_weights = tf.nn.softmax(batched_contexts_weights, axis=1)  # (batch, max_contexts, 1)
-            attention_weights = tf.where(
-                tf.is_nan(attention_weights),
-                tf.zeros_like(attention_weights),
-                attention_weights
-            )
-            batched_embed = tf.reshape(flat_embed, shape=[-1, max_contexts, self.config.EMBEDDINGS_SIZE])
+            batched_embed = tf.reshape(flat_embed,
+                                       shape=[-1, max_contexts, self.config.EMBEDDINGS_SIZE])  # (batch, max_contexts, dim)
             aggregated_contexts = tf.reduce_sum(tf.multiply(batched_embed, attention_weights),
                                                 axis=1)  # (batch, dim)
             return aggregated_contexts, attention_weights
