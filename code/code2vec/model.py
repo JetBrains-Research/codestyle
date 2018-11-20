@@ -320,7 +320,7 @@ class Model:
             weighted_average_contexts, attention_weights = \
                 self.calculate_weighted_contexts(tokens_vocab, paths_vocab, added, deleted, is_evaluating=True)
 
-        cos = self.build_simple_decision_function(weighted_average_contexts, trainable=False)
+            cos = self.build_simple_decision_function(weighted_average_contexts, trainable=False)
 
         topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.config.ENTITIES_VOCAB_SIZE))
         top_indices = tf.to_int64(topk_candidates.indices)
