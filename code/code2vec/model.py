@@ -265,12 +265,17 @@ class Model:
 
         return tokens_vocab, paths_vocab
 
-    def build_decision_function(self, weights, trainable=True):
+    def build_complex_decision_function(self, weights, trainable=True):
         layer_1 = tf.layers.dense(weights, self.config.EMBEDDINGS_SIZE, activation=tf.nn.tanh,
                                   name='DECISION_1', trainable=trainable) # (batch, dim)
         layer_2 = tf.layers.dense(layer_1, self.config.EMBEDDINGS_SIZE * 2, activation=tf.nn.tanh,
                                   name='DECISION_2', trainable=trainable)  # (batch, 2 * dim)
         layer_out = tf.layers.dense(layer_2, self.config.ENTITIES_VOCAB_SIZE + 1, activation=None,
+                                    name='DECISION_OUT', trainable=trainable) # (batch, entities)
+        return layer_out
+
+    def build_simple_decision_function(self, weights, trainable=True):
+        layer_out = tf.layers.dense(weights, self.config.ENTITIES_VOCAB_SIZE + 1, activation=None,
                                     name='DECISION_OUT', trainable=trainable) # (batch, entities)
         return layer_out
 
@@ -294,7 +299,7 @@ class Model:
 
             weighted_average_contexts, _ = self.calculate_weighted_contexts(tokens_vocab, paths_vocab, added, deleted)
 
-            logits = self.build_decision_function(weighted_average_contexts, trainable=True)
+            logits = self.build_simple_decision_function(weighted_average_contexts, trainable=True)
             batch_size = tf.to_float(tf.shape(entities_input)[0])
             loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
                 labels=tf.reshape(entities_input, [-1]),
@@ -315,7 +320,7 @@ class Model:
             weighted_average_contexts, attention_weights = \
                 self.calculate_weighted_contexts(tokens_vocab, paths_vocab, added, deleted, is_evaluating=True)
 
-        cos = self.build_decision_function(weighted_average_contexts, trainable=False)
+        cos = self.build_simple_decision_function(weighted_average_contexts, trainable=False)
 
         topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.config.ENTITIES_VOCAB_SIZE))
         top_indices = tf.to_int64(topk_candidates.indices)
@@ -352,11 +357,11 @@ class Model:
 
         flat_embed = tf.tanh(tf.matmul(flat_embed, transform_param))  # (batch * 2 * max_contexts, dim * 3)
 
-        contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
-                                     name='ATTENTION_1', trainable=trainable) # (batch * 2 * max_contexts, dim/2)
+        # contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
+        #                              name='ATTENTION_1', trainable=trainable) # (batch * 2 * max_contexts, dim/2)
         # contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
         #                              name='ATTENTION_2', trainable=trainable)  # (batch * 2 * max_contexts, dim/2)
-        contexts_out = tf.layers.dense(contexts_1, 1, activation=None,
+        contexts_out = tf.layers.dense(flat_embed, 1, activation=None,
                                        name='ATTENTION_OUT', trainable=trainable) # (batch * 2 * max_contexts, 1)
 
         batched_contexts_weights = tf.reshape(contexts_out, [-1, 2 * max_contexts, 1])  # (batch, 2 * max_contexts, 1)
