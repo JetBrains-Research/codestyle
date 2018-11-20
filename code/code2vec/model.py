@@ -259,17 +259,23 @@ class Model:
                                        shape=(self.config.TOKENS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                        dtype=tf.float32, initializer=initializer, trainable=trainable)
 
-        entities_vocab = tf.get_variable('ENTITIES_VOCAB',
-                                         shape=(self.config.ENTITIES_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
-                                         dtype=tf.float32, initializer=initializer, trainable=trainable)
-
         paths_vocab = tf.get_variable('PATHS_VOCAB',
                                       shape=(self.config.PATHS_VOCAB_SIZE + 1, self.config.EMBEDDINGS_SIZE),
                                       dtype=tf.float32, initializer=initializer, trainable=trainable)
 
-        return tokens_vocab, entities_vocab, paths_vocab
+        return tokens_vocab, paths_vocab
 
-    def create_dicts(self, starts, paths, ends, mask):
+    def build_decision_function(self, weights, trainable=True):
+        layer_1 = tf.layers.dense(weights, self.config.EMBEDDINGS_SIZE, activation=tf.nn.tanh,
+                                  name='DECISION_1', trainable=trainable) # (batch, dim)
+        layer_2 = tf.layers.dense(layer_1, self.config.EMBEDDINGS_SIZE * 2, activation=tf.nn.tanh,
+                                  name='DECISION_2', trainable=trainable)  # (batch, 2 * dim)
+        layer_out = tf.layers.dense(layer_2, self.config.ENTITIES_VOCAB_SIZE + 1, activation=None,
+                                    name='DECISION_OUT', trainable=trainable) # (batch, entities)
+        return layer_out
+
+    @staticmethod
+    def create_dicts(starts, paths, ends, mask):
         return {'starts': starts,
                 'paths': paths,
                 'ends': ends,
@@ -284,11 +290,11 @@ class Model:
 
         with tf.variable_scope('model'):
             initializer = tf.contrib.layers.variance_scaling_initializer(factor=1.0, mode='FAN_OUT', uniform=True)
-            tokens_vocab, entities_vocab, paths_vocab = self.get_vocabs(initializer=initializer)
+            tokens_vocab, paths_vocab = self.get_vocabs(initializer=initializer)
 
             weighted_average_contexts, _ = self.calculate_weighted_contexts(tokens_vocab, paths_vocab, added, deleted)
 
-            logits = tf.matmul(weighted_average_contexts, entities_vocab, transpose_b=True)
+            logits = self.build_decision_function(weighted_average_contexts, trainable=True)
             batch_size = tf.to_float(tf.shape(entities_input)[0])
             loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
                 labels=tf.reshape(entities_input, [-1]),
@@ -300,8 +306,7 @@ class Model:
 
     def build_test_graph(self, input_tensors, normalize_scores=False):
         with tf.variable_scope('model', reuse=self.get_should_reuse_variables()):
-            tokens_vocab, entities_vocab, paths_vocab = self.get_vocabs(trainable=False)
-            entities_vocab = tf.transpose(entities_vocab)  # (dim, word_vocab + 1)
+            tokens_vocab, paths_vocab = self.get_vocabs(trainable=False)
             entities_input, \
             added_starts, added_paths, added_ends, added_mask, \
             deleted_starts, deleted_paths, deleted_ends, deleted_mask = input_tensors
@@ -310,7 +315,7 @@ class Model:
             weighted_average_contexts, attention_weights = \
                 self.calculate_weighted_contexts(tokens_vocab, paths_vocab, added, deleted, is_evaluating=True)
 
-        cos = tf.matmul(weighted_average_contexts, entities_vocab)
+        cos = self.build_decision_function(weighted_average_contexts, trainable=False)
 
         topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.config.ENTITIES_VOCAB_SIZE))
         top_indices = tf.to_int64(topk_candidates.indices)
@@ -349,8 +354,8 @@ class Model:
 
         contexts_1 = tf.layers.dense(flat_embed, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
                                      name='ATTENTION_1', trainable=trainable) # (batch * 2 * max_contexts, dim/2)
-        contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
-                                     name='ATTENTION_2', trainable=trainable)  # (batch * 2 * max_contexts, dim/2)
+        # contexts_2 = tf.layers.dense(contexts_1, self.config.EMBEDDINGS_SIZE // 2, activation=tf.nn.tanh,
+        #                              name='ATTENTION_2', trainable=trainable)  # (batch * 2 * max_contexts, dim/2)
         contexts_out = tf.layers.dense(contexts_1, 1, activation=None,
                                        name='ATTENTION_OUT', trainable=trainable) # (batch * 2 * max_contexts, 1)
 
