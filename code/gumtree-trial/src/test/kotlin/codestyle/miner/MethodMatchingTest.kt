@@ -4,12 +4,14 @@ import org.junit.Assert
 import org.junit.Test
 
 class MethodMatchingTest {
+    val matcher = MethodMatcher("dummy")
+
     @Test
     fun testMatching1() {
         val fileBefore = "testData/differ/matching/1/Before.java"
         val fileAfter = "testData/differ/matching/1/After.java"
 
-        val context = getMappingContext(fileBefore, fileAfter)
+        val context = matcher.getMappingContext(fileBefore, fileAfter)
 
         Assert.assertEquals(1, context.mappings.size)
         Assert.assertNotNull(context.mappings.first().before)
@@ -23,7 +25,7 @@ class MethodMatchingTest {
         val fileBefore = "testData/differ/matching/2/Before.java"
         val fileAfter = "testData/differ/matching/2/After.java"
 
-        val context = getMappingContext(fileBefore, fileAfter)
+        val context = matcher.getMappingContext(fileBefore, fileAfter)
 
         Assert.assertEquals(1, context.mappings.size)
 
@@ -42,7 +44,7 @@ class MethodMatchingTest {
         val fileBefore = "testData/differ/matching/3/Before.java"
         val fileAfter = "testData/differ/matching/3/After.java"
 
-        val context = getMappingContext(fileBefore, fileAfter)
+        val context = matcher.getMappingContext(fileBefore, fileAfter)
 
         Assert.assertEquals(2, context.mappings.size)
 
@@ -66,7 +68,7 @@ class MethodMatchingTest {
         val fileBefore = "testData/differ/matching/4/Before.java"
         val fileAfter = "testData/differ/matching/4/After.java"
 
-        val context = getMappingContext(fileBefore, fileAfter)
+        val context = matcher.getMappingContext(fileBefore, fileAfter)
 
         Assert.assertEquals(2, context.mappings.size)
 
@@ -89,7 +91,7 @@ class MethodMatchingTest {
         val fileBefore = "testData/differ/matching/5/Before.java"
         val fileAfter = "testData/differ/matching/5/After.java"
 
-        val context = getMappingContext(fileBefore, fileAfter)
+        val context = matcher.getMappingContext(fileBefore, fileAfter)
 
         Assert.assertEquals(1, context.mappings.size)
 
