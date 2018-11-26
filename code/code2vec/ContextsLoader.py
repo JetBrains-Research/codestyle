@@ -11,6 +11,7 @@ class ContextsLoader:
         np.random.seed(seed)
         self.config = config
         self.ids, self.paths_before, self.paths_after, self.dim_ids = self.read_files(files)
+        print('Loaded all files')
         self.default_value = tf.constant([empty_context for _ in range(self.config.MAX_CONTEXTS)], dtype=tf.int32)
         self.size = len(self.ids)
         self.ids_table = self.ids_mapping(self.ids)
@@ -27,9 +28,9 @@ class ContextsLoader:
             for index, row in df.iterrows():
                 cnt_before = row['pathsCountBefore']
                 cnt_after = row['pathsCountAfter']
-                if cnt_before + cnt_after < self.config.PATH_MIN or \
-                        self.config.PATH_MAX < cnt_before or self.config.PATH_MAX < cnt_after:
-                    continue
+                # if cnt_before + cnt_after < self.config.PATH_MIN or \
+                #         self.config.PATH_MAX < cnt_before or self.config.PATH_MAX < cnt_after:
+                #     continue
                 ids.append(index)
                 paths_before.append(self.unpack_and_trim(row['pathsBefore']))
                 paths_after.append(self.unpack_and_trim(row['pathsAfter']))

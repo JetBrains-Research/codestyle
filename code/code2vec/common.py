@@ -16,9 +16,10 @@ class Config:
         config.NUM_BATCHING_THREADS = 2
         config.BATCH_QUEUE_SIZE = 30000
         config.MAX_CONTEXTS = 200
-        config.PATH_LIMIT = 200
+        config.PATH_MAX = 500
+        config.PATH_MIN = 4
         config.TOKENS_VOCAB_SIZE = 690708
-        config.ENTITIES_VOCAB_SIZE = 10
+        config.ENTITIES_VOCAB_SIZE = 400
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 8
         config.PACK_SIZE = 16
@@ -28,9 +29,32 @@ class Config:
         config.NUM_EXAMPLES = args.size
         config.TRAIN_PATH = args.data_path
         config.TEST_PATH = args.test_path
+        config.CHANGES_PATH = args.changes_path
         config.SAVE_PATH = args.save_path
         config.LOAD_PATH = args.load_path
         config.RELEASE = args.release
+        return config
+
+    @staticmethod
+    def get_without_args():
+        config = Config()
+        config.NUM_EPOCHS = 60
+        config.SAVE_EVERY_EPOCHS = 3
+        config.BATCH_SIZE = 128
+        config.TEST_BATCH_SIZE = config.BATCH_SIZE
+        config.READING_BATCH_SIZE = 1300 * 4
+        config.NUM_BATCHING_THREADS = 2
+        config.BATCH_QUEUE_SIZE = 30000
+        config.MAX_CONTEXTS = 200
+        config.PATH_MAX = 500
+        config.PATH_MIN = 4
+        config.TOKENS_VOCAB_SIZE = 690708
+        config.ENTITIES_VOCAB_SIZE = 10
+        config.PATHS_VOCAB_SIZE = 384641
+        config.EMBEDDINGS_SIZE = 8
+        config.PACK_SIZE = 16
+        config.MAX_TO_KEEP = 10
+        config.DATASET_FOLDER = 'dataset/'
         return config
 
     def __init__(self):
@@ -43,8 +67,11 @@ class Config:
         self.BATCH_QUEUE_SIZE = 0
         self.TRAIN_PATH = ''
         self.TEST_PATH = ''
+        self.CHANGES_PATH = ''
         self.MAX_CONTEXTS = 0
         self.PATH_LIMIT = 0
+        self.PATH_MAX = 500
+        self.PATH_MIN = 4
         self.TOKENS_VOCAB_SIZE = 0
         self.ENTITIES_VOCAB_SIZE = 0
         self.PATHS_VOCAB_SIZE = 0

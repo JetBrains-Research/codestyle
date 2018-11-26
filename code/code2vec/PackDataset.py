@@ -12,14 +12,13 @@ class PackDataset:
             self.create_placeholders(self.train_entities, self.train_packs)
         self.test_entities_placeholder, self.test_packs_placeholder = \
             self.create_placeholders(self.test_entities, self.test_packs)
-        self.dataset, self.train_iterator = \
+        self.train_dataset, self.train_iterator = \
             self.create_dataset(self.train_packs_placeholder, self.train_entities_placeholder)
-        _, self.test_iterator = \
+        self.test_dataset, self.test_iterator = \
             self.create_dataset(self.test_packs_placeholder, self.test_entities_placeholder)
         self.handle = tf.placeholder(tf.string, shape=[])
-        self.iterator = tf.data.Iterator.from_string_handle(
-            self.handle, self.dataset.output_types, self.dataset.output_shapes)
-        self.next_elements = self.iterator.get_next()
+        self.next_train = self.train_iterator.get_next()
+        self.next_test = self.test_iterator.get_next()
 
     def read_files(self, files, shuffle=False):
         entities = []
@@ -31,12 +30,12 @@ class PackDataset:
                     entities.append(items[0])
                     packs.append(items[1:])
 
-        entities = np.array(entities)
-        packs = np.array(packs)
+        entities = np.array(entities, dtype=np.int32)
+        packs = np.array(packs, dtype=np.int32)
         if shuffle:
             perm = np.random.permutation(len(entities))
-            entities = entities[perm]
-            packs = packs[perm]
+            # entities = entities[perm]
+            # packs = packs[perm]
         return entities, packs
 
     def create_placeholders(self, entities, packs):
@@ -50,9 +49,6 @@ class PackDataset:
         return dataset, iterator
 
     def init_iterators(self, sess):
-        self.train_handle = sess.run(self.train_iterator.string_handle())
-        self.test_handle = sess.run(self.test_iterator.string_handle())
-
         # initialise iterators
         sess.run(self.train_iterator.initializer, feed_dict={
             self.train_packs_placeholder: self.train_packs,
@@ -62,9 +58,9 @@ class PackDataset:
             self.test_packs_placeholder: self.test_packs,
             self.test_entities_placeholder: self.test_entities
         })
-
-    def next_train(self, sess):
-        return sess.run(self.next_elements, feed_dict={self.handle: self.train_handle})
-
-    def next_test(self, sess):
-        return sess.run(self.next_elements, feed_dict={self.handle: self.test_handle})
+    #
+    # def next_train(self, sess):
+    #     return sess.run(self.next_elements, feed_dict={self.handle: self.train_handle})
+    #
+    # def next_test(self, sess):
+    #     return sess.run(self.next_elements, feed_dict={self.handle: self.test_handle})

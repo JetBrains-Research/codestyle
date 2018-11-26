@@ -6,11 +6,13 @@ import sys
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("-sz", "--size", help="train size", type=int, required=True)
-    parser.add_argument("-d", "--data", dest="data_path",
+    parser.add_argument("-sz", "--size", help="train size", type=int, required=False)
+    parser.add_argument("-dp", "--data", dest="data_path",
                         help="path to preprocessed dataset", required=False)
-    parser.add_argument("-te", "--test", dest="test_path",
+    parser.add_argument("-tp", "--test", dest="test_path",
                         help="path to test file", metavar="FILE", required=False)
+    parser.add_argument("-cp", "--changes", dest="changes_path",
+                        help="path to changes file", metavar="FILE", required=False)
 
     is_training = '--train' in sys.argv or '-tr' in sys.argv
     parser.add_argument("-s", "--save", dest="save_path",

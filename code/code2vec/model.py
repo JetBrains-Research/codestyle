@@ -1,6 +1,7 @@
 import tensorflow as tf
 
-import PathContextReader
+from PackDataset import PackDataset
+from ContextsLoader import ContextsLoader
 import numpy as np
 import time
 from common import common
@@ -42,51 +43,56 @@ class Model:
         print('Starting training')
         start_time = time.time()
 
+        self.pack_dataset = PackDataset(self.config, [self.config.TRAIN_PATH], [self.config.TEST_PATH])
+        print('Created pack dataset')
+        self.contexts_loader = ContextsLoader(self.config, [self.config.CHANGES_PATH])
+        print('Created contexts loader')
+        packs, entities = self.pack_dataset.next_train
+
+        optimizer, train_loss = self.build_training_graph(packs, entities, self.contexts_loader)
+        print('Built training graph')
+        self.saver = tf.train.Saver(max_to_keep=self.config.MAX_TO_KEEP)
+        self.summary_writer = tf.summary.FileWriter('logs/', graph=self.sess.graph)
+
+        self.initialize_session_variables(self.sess)
+        print('Initalized variables')
+
+        if self.config.LOAD_PATH:
+            self.load_model(self.sess)
+
+        self.pack_dataset.init_iterators(self.sess)
+
         batch_num = 0
         sum_loss = 0
         multi_batch_start_time = time.time()
         num_batches_to_evaluate = max(int(
             self.config.NUM_EXAMPLES / self.config.BATCH_SIZE * self.config.SAVE_EVERY_EPOCHS), 1)
 
-        self.queue_thread = PathContextReader.PathContextReader(config=self.config, file_path=self.config.TRAIN_PATH)
-        optimizer, train_loss = self.build_training_graph(self.queue_thread.input_tensors())
-        self.saver = tf.train.Saver(max_to_keep=self.config.MAX_TO_KEEP)
-        self.summary_writer = tf.summary.FileWriter('logs/', graph=self.sess.graph)
+        for epoch in range(self.config.NUM_EPOCHS):
+            batch_num += 1
+            print(batch_num)
+            _, batch_loss = self.sess.run([optimizer, train_loss])
+            sum_loss += batch_loss
+            if batch_num % self.num_batches_to_log == 0:
+                self.trace(sum_loss, batch_num, multi_batch_start_time)
+                print('Number of waiting examples in queue: %d' % self.sess.run(
+                    "shuffle_batch/random_shuffle_queue_Size:0"))
+                sum_loss = 0
+                multi_batch_start_time = time.time()
 
-        self.initialize_session_variables(self.sess)
-        print('Initalized variables')
-        if self.config.LOAD_PATH:
-            self.load_model(self.sess)
-        with self.queue_thread.start(self.sess):
-            time.sleep(1)
-            print('Started reader...')
-            try:
-                while True:
-                    batch_num += 1
-                    _, batch_loss = self.sess.run([optimizer, train_loss])
-                    sum_loss += batch_loss
-                    if batch_num % self.num_batches_to_log == 0:
-                        self.trace(sum_loss, batch_num, multi_batch_start_time)
-                        print('Number of waiting examples in queue: %d' % self.sess.run(
-                            "shuffle_batch/random_shuffle_queue_Size:0"))
-                        sum_loss = 0
-                        multi_batch_start_time = time.time()
-                    if batch_num % num_batches_to_evaluate == 0:
-                        epoch_num = int((batch_num / num_batches_to_evaluate) * self.config.SAVE_EVERY_EPOCHS)
-                        save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
-                        self.save_model(self.sess, save_target)
-                        print('Saved after %d epochs in: %s' % (epoch_num, save_target))
-                        print('------------------------------------')
-                        print('Results of evaluation on test data:')
-                        self.evaluate_and_print_results(self.config.TEST_PATH, epoch_num)
-                        print('------------------------------------')
-                        print('------------------------------------')
-                        print('Results of evaluation on train data:')
-                        self.evaluate_and_print_results(self.config.TRAIN_PATH, epoch_num)
-                        print('------------------------------------')
-
-            except tf.errors.OutOfRangeError:
-                print('Done training')
+            if batch_num % num_batches_to_evaluate == 0:
+                epoch_num = int((batch_num / num_batches_to_evaluate) * self.config.SAVE_EVERY_EPOCHS)
+                save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
+                self.save_model(self.sess, save_target)
+                print('Saved after %d epochs in: %s' % (epoch_num, save_target))
+                print('------------------------------------')
+                print('Results of evaluation on test data:')
+                self.evaluate_and_print_results(self.config.TEST_PATH, epoch_num)
+                print('------------------------------------')
+                print('------------------------------------')
+                print('Results of evaluation on train data:')
+                self.evaluate_and_print_results(self.config.TRAIN_PATH, epoch_num)
+                print('------------------------------------')
 
         if self.config.SAVE_PATH:
             self.save_model(self.sess, self.config.SAVE_PATH)
@@ -107,7 +113,6 @@ class Model:
         if self.eval_queue is None:
             self.eval_queue = PathContextReader.PathContextReader(config=self.config, file_path=file_path,
                                                                   is_evaluating=True)
-            self.eval_placeholder = self.eval_queue.get_input_placeholder()
             self.predict_top_indices_op, self.predict_top_scores_op, \
             self.predict_original_entities_op, self.attention_weights_op = \
                 self.build_test_graph(self.eval_queue.get_filtered_batches())
@@ -280,43 +285,40 @@ class Model:
                                     name='DECISION_OUT', trainable=trainable)
         return layer_out
 
-    @staticmethod
-    def create_dicts(starts, paths, ends, mask):
-        return {'starts': starts,
-                'paths': paths,
-                'ends': ends,
-                'mask': mask}
+    def build_training_graph(self, packs, entities, contexts_loader):
+        # packs -> (batch, pack)
+        # entities -> (batch, )
 
-    def build_training_graph(self, input_tensors):
-        entities_input, \
-        added_starts, added_paths, added_ends, added_mask, \
-        deleted_starts, deleted_paths, deleted_ends, deleted_mask \
-            = input_tensors  # (batch, 1), (batch, pack, max_contexts)
-        added = self.create_dicts(added_starts, added_paths, added_ends, added_mask)
-        deleted = self.create_dicts(deleted_starts, deleted_paths, deleted_ends, deleted_mask)
+        # (batch, pack, dim), (batch, pack, dim)
+        before_contexts, after_contexts = contexts_loader.get(packs)
 
         with tf.variable_scope('model'):
             initializer = tf.contrib.layers.variance_scaling_initializer(factor=1.0, mode='FAN_OUT', uniform=True)
             tokens_vocab, paths_vocab = self.get_vocabs(initializer=initializer)
 
             # (batch, pack, max_contexts * 2, dim)
-            contexts_embed, valid_mask = \
-                self.build_contexts(tokens_vocab, paths_vocab, added, deleted)
+            # contexts_embed, valid_mask = \
+            #     self.build_contexts(tokens_vocab, paths_vocab, before_contexts, after_contexts)
+            contexts_embed = \
+                self.build_contexts(tokens_vocab, paths_vocab, before_contexts, after_contexts)
 
             # (batch, pack, dim)
             weighted_average_contexts, _ = \
-                self.calculate_weighted_contexts(contexts_embed, valid_mask)
+                self.calculate_weighted_contexts(contexts_embed, None)
+            print(weighted_average_contexts.shape)
 
             # (batch, dim)
             weighted_average_methods, _ = \
                 self.calculate_weighted_methods(weighted_average_contexts)
+            print(weighted_average_methods.shape)
 
             # (batch, entities)
-            logits = self.build_simple_decision_function(weighted_average_contexts)
+            logits = self.build_simple_decision_function(weighted_average_methods)
 
-            batch_size = tf.to_float(tf.shape(entities_input)[0])
+            print(logits.shape)
+            batch_size = tf.to_float(tf.shape(entities)[0])
             loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=tf.reshape(entities_input, [-1]),
+                labels=tf.reshape(entities, [-1]),
                 logits=logits)) / batch_size
 
             optimizer = tf.train.AdamOptimizer().minimize(loss)
@@ -333,17 +335,17 @@ class Model:
             deleted = self.create_dicts(deleted_starts, deleted_paths, deleted_ends, deleted_mask)
             
             # (batch, pack, max_contexts * 2, dim)
-            contexts_embed, valid_mask = \
+            # contexts_embed, valid_mask = \
+            #     self.build_contexts(tokens_vocab, paths_vocab, added, deleted, trainable=False)
+            contexts_embed = \
                 self.build_contexts(tokens_vocab, paths_vocab, added, deleted, trainable=False)
-            
+
             # (batch, pack, dim)
             weighted_average_contexts, _ = \
-                self.calculate_weighted_contexts(contexts_embed, valid_mask, trainable=False)
-
+                self.calculate_weighted_contexts(contexts_embed, None, trainable=False)
             # (batch, dim)
             weighted_average_methods, _ = \
                 self.calculate_weighted_methods(weighted_average_contexts, trainable=False)
-
             # (batch, entities)
             cos = self.build_simple_decision_function(weighted_average_methods, trainable=False)
 
@@ -356,15 +358,23 @@ class Model:
 
         return top_indices, top_scores, original_entities, attention_weights
 
-    def build_contexts(self, tokens_vocab, paths_vocab, removed, added, trainable=True):
+    def get_slice(self, contexts, dim):
+        return tf.slice(contexts, [0, 0, 0, dim], [-1, -1, self.config.MAX_CONTEXTS, 1])
+
+    def build_contexts(self, tokens_vocab, paths_vocab, before_contexts, after_contexts, trainable=True):
+        # input -> (batch, pack, max_contexts, dim)
+
         keep_prob1 = 0.75
 
         # (batch, pack, max_contexts * 2, 1)
-        starts = tf.concat([removed['starts'], added['starts']], axis=2)
-        paths = tf.concat([removed['paths'], added['paths']], axis=2)
-        ends = tf.concat([removed['ends'], added['ends']], axis=2)
+        starts = tf.concat([self.get_slice(before_contexts, 0), self.get_slice(after_contexts, 0)], axis=2)
+        paths = tf.concat([self.get_slice(before_contexts, 1), self.get_slice(after_contexts, 1)], axis=2)
+        ends = tf.concat([self.get_slice(before_contexts, 2), self.get_slice(after_contexts, 2)], axis=2)
+        starts = tf.squeeze(starts, axis=-1)
+        paths = tf.squeeze(paths, axis=-1)
+        ends = tf.squeeze(ends, axis=-1)
         # (batch, pack, max_contexts * 2)
-        valid_mask = tf.concat([removed['mask'], added['mask']], axis=2)
+        # valid_mask = tf.concat([removed['mask'], added['mask']], axis=2)
 
         # (batch, pack, max_contexts * 2, dim)
         start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=starts)
@@ -377,13 +387,11 @@ class Model:
         if trainable:
             context_embed = tf.nn.dropout(context_embed, keep_prob1)
 
-        transform_param = tf.get_variable('TRANSFORM',
-                                          shape=(self.config.EMBEDDINGS_SIZE * 3, self.config.EMBEDDINGS_SIZE),
-                                          dtype=tf.float32, trainable=trainable)
-
         # (batch, pack, max_contexts * 2, dim)
-        transformed_embed = tf.tanh(tf.matmul(context_embed, transform_param))
-        return transformed_embed, valid_mask
+        transformed_embed = tf.layers.dense(context_embed, self.config.EMBEDDINGS_SIZE, activation=None,
+                                            name='TRANSFROM', trainable=trainable)
+
+        return transformed_embed#, valid_mask
 
     def calculate_weighted_contexts(self, context_embed, valid_mask, trainable=True):
         # input -> (batch, pack, max_contexts * 2, dim)
@@ -393,12 +401,12 @@ class Model:
                                           name='ATTENTION_CONTEXTS', trainable=trainable)
 
         # (batch, pack, max_contexts * 2)
-        mask = tf.log(valid_mask)
+        # mask = tf.log(valid_mask)
 
         # (batch, pack, max_contexts * 2, 1)
-        mask = tf.expand_dims(mask, axis=3)
-        contexts_weights += mask
-        attention_weights = tf.nn.softmax(batched_contexts_weights, axis=2)
+        # mask = tf.expand_dims(mask, axis=3)
+        # contexts_weights += mask
+        attention_weights = tf.nn.softmax(contexts_weights, axis=2)
 
         # (batch, pack, dim)
         weighted_average_contexts = tf.reduce_sum(tf.multiply(context_embed, attention_weights), axis=2)
