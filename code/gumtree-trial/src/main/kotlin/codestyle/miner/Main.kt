@@ -12,6 +12,7 @@ import kotlin.concurrent.thread
 fun main(args: Array<String>) {
     val repoNames = listOf("gradle", "elasticsearch")
     repoNames.forEach {
+        println("Processing repository $it")
         processRepositoryData(it)
     }
 }
