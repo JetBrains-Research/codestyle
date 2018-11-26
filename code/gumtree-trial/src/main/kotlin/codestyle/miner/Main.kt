@@ -10,7 +10,10 @@ import java.io.FileWriter
 import kotlin.concurrent.thread
 
 fun main(args: Array<String>) {
-    processRepositoryData("intellij-community")
+    val repoNames = listOf("gradle", "neo4j", "elasticsearch")
+    repoNames.forEach {
+        processRepositoryData(it)
+    }
 }
 
 class CsvSettings(csvHeader: String) {
@@ -110,7 +113,9 @@ fun processRepositoryData(repoName: String) {
 
     val infos = processEntries(entries, pathStorage, methodMatcher)
 
-    dumpData(entries, infos, pathStorage)
+    val dumper = DataDumper(repoName)
+
+    dumper.dumpData(entries, infos, pathStorage)
 
     val elapsed = System.currentTimeMillis() - startTime
     println("Processed ${entries.size} entries in ${elapsed / 1000} seconds (${1000.0 * entries.size / elapsed} entries/s)")

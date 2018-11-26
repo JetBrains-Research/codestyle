@@ -49,105 +49,109 @@ class MethodMapping(val before: MethodInfo?, val after: MethodInfo?) {
     val isChanged = isChanged(before, after)
 }
 
-fun dumpData(entries: List<ChangeEntry>, changes: List<FileChangeInfo>, pathStorage: PathStorage) {
-    saveChangeEntries("change_metadata.csv", entries)
-    saveFileChanges(changes)
-    dumpPathStorage(pathStorage)
-}
+class DataDumper(val repoName: String) {
+    val dirName = "out/$repoName"
 
-fun saveFileChanges(changes: List<FileChangeInfo>) {
-    val chunkSize = 10_000
-    val chunkedChanges = changes.chunked(chunkSize)
-    val methodIdStorage: IncrementalIdStorage<MethodId> = IncrementalIdStorage()
-    chunkedChanges.forEachIndexed { i, list ->
-        println("Saving file change data: chunk ${i + 1} of ${chunkedChanges.size}... ")
-        saveFileChangesChunk("file_changes_$i.csv", list, methodIdStorage)
-        println("Done")
+    fun dumpData(entries: List<ChangeEntry>, changes: List<FileChangeInfo>, pathStorage: PathStorage) {
+        saveChangeEntries("change_metadata.csv", entries)
+        saveFileChanges(changes)
+        dumpPathStorage(pathStorage)
     }
-    dumpMethodIdStorage(methodIdStorage, "method_ids.csv")
-}
 
-fun dumpMethodIdStorage(storage: IncrementalIdStorage<MethodId>, filename: String) {
-    val header = "id;count;enclosingClass;classType;methodName;argTypes"
-    val lines = mutableListOf(header)
-    storage.valueMap.forEach {
-        val id = it.value
-        val methodId = it.key
-        val line = "$id;${storage.getIdCount(id)};${methodId.enclosingClassName};${methodId.enclosingClassType};${methodId.methodName};${methodId.argTypes.joinToString("|")}"
-        lines.add(line)
+    fun saveFileChanges(changes: List<FileChangeInfo>) {
+        val chunkSize = 10_000
+        val chunkedChanges = changes.chunked(chunkSize)
+        val methodIdStorage: IncrementalIdStorage<MethodId> = IncrementalIdStorage()
+        chunkedChanges.forEachIndexed { i, list ->
+            println("Saving file change data: chunk ${i + 1} of ${chunkedChanges.size}... ")
+            saveFileChangesChunk("file_changes_$i.csv", list, methodIdStorage)
+            println("Done")
+        }
+        dumpMethodIdStorage(methodIdStorage, "method_ids.csv")
     }
-    writeLinesToFile(filename, lines)
-}
 
-fun dumpStringIdStorage(storage: IncrementalIdStorage<String>, filename: String) {
-    val header = "id,count,value"
-    val lines = mutableListOf(header)
-    storage.valueMap.forEach {
-        val id = it.value
-        val stringValue = it.key
-        lines.add("$id,${storage.getIdCount(id)},${stringValue.replace(',',' ')}")
+    fun dumpMethodIdStorage(storage: IncrementalIdStorage<MethodId>, filename: String) {
+        val header = "id;count;enclosingClass;classType;methodName;argTypes"
+        val lines = mutableListOf(header)
+        storage.valueMap.forEach {
+            val id = it.value
+            val methodId = it.key
+            val line = "$id;${storage.getIdCount(id)};${methodId.enclosingClassName};${methodId.enclosingClassType};${methodId.methodName};${methodId.argTypes.joinToString("|")}"
+            lines.add(line)
+        }
+        writeLinesToFile(filename, lines)
     }
-    writeLinesToFile(filename, lines)
-}
 
-fun dumpNodeTypeStorage(storage: IncrementalIdStorage<NodeType>, filename: String) {
-    val header = "id,count,type,direction"
-    val lines = mutableListOf(header)
-    storage.valueMap.forEach {
-        val id = it.value
-        val nodeType = it.key
-        lines.add("$id,${storage.getIdCount(id)},${nodeType.type},${nodeType.direction}")
+    fun dumpStringIdStorage(storage: IncrementalIdStorage<String>, filename: String) {
+        val header = "id,count,value"
+        val lines = mutableListOf(header)
+        storage.valueMap.forEach {
+            val id = it.value
+            val stringValue = it.key
+            lines.add("$id,${storage.getIdCount(id)},${stringValue.replace(',', ' ')}")
+        }
+        writeLinesToFile(filename, lines)
     }
-    writeLinesToFile(filename, lines)
-}
 
-fun dumpPathIdStorage(storage: IncrementalIdStorage<List<Long>>, filename: String) {
-    val header = "id,count,nodeTypes"
-    val lines = mutableListOf(header)
-    storage.valueMap.forEach { entry ->
-        val id = entry.value
-        val nodeTypeIds = entry.key
-        lines.add("$id,${storage.getIdCount(id)},${nodeTypeIds.joinToString(" ")}")
+    fun dumpNodeTypeStorage(storage: IncrementalIdStorage<NodeType>, filename: String) {
+        val header = "id,count,type,direction"
+        val lines = mutableListOf(header)
+        storage.valueMap.forEach {
+            val id = it.value
+            val nodeType = it.key
+            lines.add("$id,${storage.getIdCount(id)},${nodeType.type},${nodeType.direction}")
+        }
+        writeLinesToFile(filename, lines)
     }
-    writeLinesToFile(filename, lines)
-}
 
-fun dumpPathStorage(storage: PathStorage) {
-    dumpStringIdStorage(storage.tokenIds, "tokens.csv")
-    dumpNodeTypeStorage(storage.nodeTypeIds, "node_types.csv")
-    dumpPathIdStorage(storage.pathIds, "path_ids.csv")
-}
+    fun dumpPathIdStorage(storage: IncrementalIdStorage<List<Long>>, filename: String) {
+        val header = "id,count,nodeTypes"
+        val lines = mutableListOf(header)
+        storage.valueMap.forEach { entry ->
+            val id = entry.value
+            val nodeTypeIds = entry.key
+            lines.add("$id,${storage.getIdCount(id)},${nodeTypeIds.joinToString(" ")}")
+        }
+        writeLinesToFile(filename, lines)
+    }
 
-fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, methodIdStorage: IncrementalIdStorage<MethodId>) {
-    val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,pathsCountBefore,pathsCountAfter,pathsBefore,pathsAfter"
+    fun dumpPathStorage(storage: PathStorage) {
+        dumpStringIdStorage(storage.tokenIds, "tokens.csv")
+        dumpNodeTypeStorage(storage.nodeTypeIds, "node_types.csv")
+        dumpPathIdStorage(storage.pathIds, "path_ids.csv")
+    }
 
-    val dirName = "out"
-    val dir = File(dirName)
-    dir.mkdirs()
-    File("$dirName/$filename").printWriter().use { out ->
-        out.println(header)
-        fileChanges.forEach { fileChange ->
-            fileChange.methodChanges.forEach {
-                val idBefore = if (it.methodIdBefore == null) 0 else methodIdStorage.record(it.methodIdBefore)
-                val idAfter = if (it.methodIdAfter == null) 0 else methodIdStorage.record(it.methodIdAfter)
-                val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
-                out.println(line)
+    fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, methodIdStorage: IncrementalIdStorage<MethodId>) {
+        val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,pathsCountBefore,pathsCountAfter,pathsBefore,pathsAfter"
+
+        val dir = File(dirName)
+        dir.mkdirs()
+        File("$dirName/$filename").printWriter().use { out ->
+            out.println(header)
+            fileChanges.forEach { fileChange ->
+                fileChange.methodChanges.forEach {
+                    val idBefore = if (it.methodIdBefore == null) 0 else methodIdStorage.record(it.methodIdBefore)
+                    val idAfter = if (it.methodIdAfter == null) 0 else methodIdStorage.record(it.methodIdAfter)
+                    val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
+                    out.println(line)
+                }
             }
+        }
+    }
+
+    fun saveChangeEntries(filename: String, changeEntries: List<ChangeEntry>) {
+        val lines = mutableListOf(CHANGE_ENTRY_CSV_HEADER)
+        changeEntries.forEach { lines.add(it.toCsvLine()) }
+        writeLinesToFile(filename, lines)
+    }
+
+    fun writeLinesToFile(filename: String, lines: List<String>) {
+        val dir = File(dirName)
+        dir.mkdirs()
+        File("$dirName/$filename").printWriter().use { out ->
+            lines.forEach { out.println(it) }
         }
     }
 }
 
-fun saveChangeEntries(filename: String, changeEntries: List<ChangeEntry>) {
-    val lines = mutableListOf(CHANGE_ENTRY_CSV_HEADER)
-    changeEntries.forEach { lines.add(it.toCsvLine()) }
-    writeLinesToFile(filename, lines)
-}
 
-fun writeLinesToFile(filename: String, lines: List<String>) {
-    val dirName = "out"
-    val dir = File(dirName)
-    dir.mkdirs()
-    File("$dirName/$filename").printWriter().use { out ->
-        lines.forEach { out.println(it) }
-    }
-}
