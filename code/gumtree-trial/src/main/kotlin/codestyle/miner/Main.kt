@@ -10,7 +10,7 @@ import java.io.FileWriter
 import kotlin.concurrent.thread
 
 fun main(args: Array<String>) {
-    val repoNames = listOf("gradle", "elasticsearch")
+    val repoNames = listOf("gradle", "neo4j")
     repoNames.forEach {
         println("Processing repository $it")
         processRepositoryData(it)
