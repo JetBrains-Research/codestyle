@@ -21,6 +21,7 @@ class Config:
         config.ENTITIES_VOCAB_SIZE = 10
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 8
+        config.PACK_SIZE = 16
         config.MAX_TO_KEEP = 10
         config.DATASET_FOLDER = 'dataset/'
         # Automatically filled, do not edit:
@@ -48,6 +49,7 @@ class Config:
         self.ENTITIES_VOCAB_SIZE = 0
         self.PATHS_VOCAB_SIZE = 0
         self.EMBEDDINGS_SIZE = 0
+        self.PACK_SIZE = 0
         self.SAVE_PATH = ''
         self.LOAD_PATH = ''
         self.MAX_TO_KEEP = 0
