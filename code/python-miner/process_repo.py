@@ -182,6 +182,8 @@ class RepositoryProcessor:
         commits_df.to_csv(self.path_settings.processed_commits_filename, index=False)
 
 
-reponame = "neo4j"
-repo_processor = RepositoryProcessor(reponame)
-repo_processor.explode_repo()
+reponames = ["gradle", "neo4j", "elasticsearch"]
+
+for reponame in reponames:
+    repo_processor = RepositoryProcessor(reponame)
+    repo_processor.explode_repo()
