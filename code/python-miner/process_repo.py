@@ -123,7 +123,7 @@ class RepositoryProcessor:
                     processed_commits.add(ce['id'])
             print("Will ignore {} already processed commits".format(len(processed_commits)))
 
-        limit = 1000
+        limit = 1000000
 
         commits_to_process = min(limit, total_commits - len(processed_commits))
         print("{} commits in the repository. Processing {}".format(total_commits, commits_to_process))
