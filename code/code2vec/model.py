@@ -69,6 +69,7 @@ class Model:
             self.load_model(self.sess)
 
         self.pack_dataset.init_iterators(self.sess)
+        print('Initialized iterators')
 
         batch_num = 0
         sum_loss = 0
