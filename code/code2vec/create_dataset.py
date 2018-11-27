@@ -33,8 +33,6 @@ def create_line(entity, added, deleted, both):
            ','.join(added) + ',' * (count_max - max(1, len(added))) + \
            ',' + \
            ','.join(deleted) + ',' * (count_max - max(1, len(deleted))) + \
-           ',' + \
-           ','.join(both) + ',' * (count_max - max(1, len(both))) + \
            '\n'
 
 
@@ -88,9 +86,7 @@ for l, r in buckets:
             for item in deleted:
                 if item not in added_set:
                     filtered_deleted.append(item)
-            for item in deleted:
-                if item in added_set:
-                    filtered_both.append(item)
+
             if len(filtered_added) > path_limit or len(filtered_deleted) > path_limit or \
                     len(filtered_both) > path_limit or \
                     len(filtered_deleted) + len(filtered_added) < 6:

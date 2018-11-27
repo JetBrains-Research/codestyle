@@ -4,7 +4,6 @@ from PackDataset import PackDataset
 from ContextsLoader import ContextsLoader
 import numpy as np
 import time
-from common import common
 from loader import Loader
 
 
@@ -156,7 +155,6 @@ class Model:
                 top_indices, top_scores, original_entities = self.sess.run(
                     [self.predict_top_indices_op, self.predict_top_scores_op, self.predict_original_entities_op])
 
-                print(original_entities.shape)
                 # Flatten original names from [[]] to []
                 # original_entities = [w for l in original_entities for w in l]
 

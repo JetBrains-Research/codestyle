@@ -6,6 +6,8 @@ class PackDataset:
 
     def __init__(self, config, train_files, test_files):
         self.config = config
+        self.mapping = {}
+        self.entities_cnt = 1
         self.train_entities, self.train_packs = self.read_files(train_files, shuffle=True)
         self.test_entities, self.test_packs = self.read_files(test_files)
         self.train_entities_placeholder, self.train_packs_placeholder = \
@@ -29,7 +31,11 @@ class PackDataset:
             with open(filename, 'r') as fin:
                 for line in fin:
                     items = list(map(int, line.split(',')))
-                    entities.append(items[0])
+                    entity = items[0]
+                    if entity not in self.mapping:
+                        self.mapping[entity] = self.entities_cnt
+                        self.entities_cnt += 1
+                    entities.append(self.mapping[entity])
                     packs.append(items[1:])
 
         entities = np.array(entities, dtype=np.int32)
