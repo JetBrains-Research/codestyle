@@ -19,7 +19,7 @@ class Config:
         config.PATH_MAX = 500
         config.PATH_MIN = 4
         config.TOKENS_VOCAB_SIZE = 690708
-        config.ENTITIES_VOCAB_SIZE = 10
+        config.ENTITIES_VOCAB_SIZE = 2
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 8
         config.PACK_SIZE = 16
