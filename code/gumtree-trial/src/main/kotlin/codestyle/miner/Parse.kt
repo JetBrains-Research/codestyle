@@ -4,9 +4,9 @@ import com.github.gumtreediff.gen.jdt.JdtTreeGenerator
 import com.github.gumtreediff.tree.ITree
 import com.github.gumtreediff.tree.TreeContext
 
-fun readAndParseBlob(blobId: BlobId?): TreeContext? {
+fun readAndParseBlob(blobId: BlobId?, repoName: String): TreeContext? {
     if (blobId == null) return null
-    val file = "../python-miner/data/exploded/intellij-community/blobs/${blobId.id}"
+    val file = "../python-miner/data/exploded/$repoName/blobs/${blobId.id}"
     return parse(file)
 }
 

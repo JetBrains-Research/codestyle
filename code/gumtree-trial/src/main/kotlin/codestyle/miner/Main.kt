@@ -10,7 +10,11 @@ import java.io.FileWriter
 import kotlin.concurrent.thread
 
 fun main(args: Array<String>) {
-    processRepositoryData()
+    val repoNames = listOf("gradle", "neo4j")
+    repoNames.forEach {
+        println("Processing repository $it")
+        processRepositoryData(it)
+    }
 }
 
 class CsvSettings(csvHeader: String) {
@@ -55,7 +59,7 @@ private fun parseChangeEntry(id: Int, csvLine: String, csvSettings: CsvSettings)
 }
 
 
-fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage): MutableList<FileChangeInfo> {
+fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage, methodMatcher: MethodMatcher): MutableList<FileChangeInfo> {
     val nCores = Runtime.getRuntime().availableProcessors()
     val nchunks = nCores - 1
     val chunkSize = (entries.size / nchunks) + 1
@@ -68,7 +72,7 @@ fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage): Mutabl
         val currentThread = thread {
             var processed = 0
             chunk.forEach {
-                val info = processChangeEntry(it, pathStorage)
+                val info = processChangeEntry(it, pathStorage, methodMatcher)
                 processed += 1
                 if (processed % 100 == 0) {
                     println("Thread $threadNumber: processed $processed of ${chunk.size} entries")
@@ -89,8 +93,8 @@ fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage): Mutabl
     return infos
 }
 
-fun processRepositoryData() {
-    val blobListFile = "../python-miner/data/exploded/intellij-community/infos_full.csv"
+fun processRepositoryData(repoName: String) {
+    val blobListFile = "../python-miner/data/exploded/$repoName/infos_full.csv"
     val lines = Files.readLines(File(blobListFile), Charsets.UTF_8)
     val settings = CsvSettings(lines.first())
     println("${lines.size} entries read")
@@ -106,23 +110,27 @@ fun processRepositoryData() {
     val entries = lines.drop(1)
             .map { parseChangeEntry(getId(), it, settings) }
 
-    val infos = processEntries(entries, pathStorage)
+    val methodMatcher = MethodMatcher(repoName)
 
-    dumpData(entries, infos, pathStorage)
+    val infos = processEntries(entries, pathStorage, methodMatcher)
+
+    val dumper = DataDumper(repoName)
+
+    dumper.dumpData(entries, infos, pathStorage)
 
     val elapsed = System.currentTimeMillis() - startTime
     println("Processed ${entries.size} entries in ${elapsed / 1000} seconds (${1000.0 * entries.size / elapsed} entries/s)")
 }
 
-fun getMappingContext(entry: ChangeEntry): MappingContext {
+fun MethodMatcher.getMappingContext(entry: ChangeEntry): MappingContext {
     return getMappingContext(entry.oldContentId, entry.newContentId)
 }
 
 fun PathContext.toShortString(): String = "${this.startToken} ${this.pathId} ${this.endToken}"
 
-fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage): FileChangeInfo {
+fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage, methodMatcher: MethodMatcher): FileChangeInfo {
     // retrieve the method mappings between the two versions of the file
-    val mappingContext = getMappingContext(entry)
+    val mappingContext = methodMatcher.getMappingContext(entry)
 
     // extract the changed methods
     val changedMappings = mappingContext.mappings.filter { it.isChanged }
