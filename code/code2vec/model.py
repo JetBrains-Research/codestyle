@@ -39,11 +39,11 @@ class Model:
         self.sess.close()
 
     def init_loaders(self):
-        self.pack_dataset = PackDataset(self.config, [self.config.TRAIN_PATH], [self.config.TEST_PATH])
+        self.pack_dataset = PackDataset(self.config, self.config.TRAIN_PATH, self.config.TEST_PATH)
         self.TRAIN_EXAMPLES = self.pack_dataset.train_examples
         self.TEST_EXAMPLES = self.pack_dataset.test_examples
         print('Created pack dataset')
-        self.contexts_loader = ContextsLoader(self.config, [self.config.CHANGES_PATH])
+        self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
         print('Created contexts loader')
 
     def train(self):

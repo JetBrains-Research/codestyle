@@ -7,11 +7,11 @@ import sys
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("-dp", "--data", dest="data_path",
-                        help="path to preprocessed dataset", required=False)
+                        help="path to preprocessed dataset", required=False, nargs='+')
     parser.add_argument("-tp", "--test", dest="test_path",
-                        help="path to test file", metavar="FILE", required=False)
+                        help="path to test file", metavar="FILE", required=False, nargs='+')
     parser.add_argument("-cp", "--changes", dest="changes_path",
-                        help="path to changes file", metavar="FILE", required=False)
+                        help="path to changes file", metavar="FILE", required=False, nargs='+')
 
     is_training = '--train' in sys.argv or '-tr' in sys.argv
     parser.add_argument("-s", "--save", dest="save_path",
