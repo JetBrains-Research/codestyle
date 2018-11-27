@@ -378,7 +378,7 @@ class Model:
 
         # (batch, pack, max_contexts * 2, dim)
         transformed_embed = tf.layers.dense(context_embed, self.config.EMBEDDINGS_SIZE, activation=None,
-                                            name='TRANSFROM', trainable=trainable)
+                                            name='TRANSFORM', trainable=trainable)
 
         return transformed_embed#, valid_mask
 
