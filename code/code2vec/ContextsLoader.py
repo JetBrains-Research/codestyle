@@ -36,16 +36,18 @@ class ContextsLoader:
                 #         self.config.PATH_MAX < cnt_before or self.config.PATH_MAX < cnt_after:
                 #     continue
                 ids[cnt] = index
-                self.unpack_and_trim(row['pathsBefore'], paths_before[cnt])
-                self.unpack_and_trim(row['pathsAfter'], paths_after[cnt])
+                set_restricted = set(row['pathsBefore'].split(';')) &  set(row['pathsAfter'].split(';'))
+                self.unpack_and_trim(row['pathsBefore'], paths_before[cnt], set_restricted)
+                self.unpack_and_trim(row['pathsAfter'], paths_after[cnt], set_restricted)
                 cnt += 1
             del df
 
         return ids, paths_before, paths_after, max(ids) + 1
 
-    def unpack_and_trim(self, paths, output):
+    def unpack_and_trim(self, paths, output, restricted):
         if type(paths) is str:
             paths = paths.split(';')
+            paths = [path for path in paths if path not in restricted]
             paths = list(map(lambda p: list(map(int, p.split())), paths))
             # if len(paths) > self.config.MAX_CONTEXTS:
             #     np.random.shuffle(paths)
