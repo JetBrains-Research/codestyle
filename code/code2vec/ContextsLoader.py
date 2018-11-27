@@ -23,7 +23,8 @@ class ContextsLoader:
         paths_before = []
         paths_after = []
 
-        for file in files:
+        for i, file in enumerate(files):
+            print('Reading file #{}/{}'.format(i + 1, len(files)))
             df = pd.read_csv(file, index_col=0)
             for index, row in df.iterrows():
                 cnt_before = row['pathsCountBefore']

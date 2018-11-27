@@ -26,7 +26,6 @@ class PackDataset:
         entities = []
         packs = []
         for i, filename in enumerate(files):
-            print("Reading file #{}/{}".format(i + 1, len(files)))
             with open(filename, 'r') as fin:
                 for line in fin:
                     items = list(map(int, line.split(',')))
