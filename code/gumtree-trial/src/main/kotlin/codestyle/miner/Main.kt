@@ -9,8 +9,12 @@ import java.io.File
 import java.io.FileWriter
 import kotlin.concurrent.thread
 
+fun readRepoNames(): List<String> {
+    return File("../python-miner/projects.txt").readLines().map { it.trim() }
+}
+
 fun main(args: Array<String>) {
-    val repoNames = listOf("gradle", "neo4j")
+    val repoNames = readRepoNames()
     repoNames.forEach {
         println("Processing repository $it")
         processRepositoryData(it)

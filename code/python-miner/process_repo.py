@@ -123,7 +123,7 @@ class RepositoryProcessor:
                     processed_commits.add(ce['id'])
             print("Will ignore {} already processed commits".format(len(processed_commits)))
 
-        limit = 1000000
+        limit = 1000
 
         commits_to_process = min(limit, total_commits - len(processed_commits))
         print("{} commits in the repository. Processing {}".format(total_commits, commits_to_process))
@@ -182,7 +182,13 @@ class RepositoryProcessor:
         commits_df.to_csv(self.path_settings.processed_commits_filename, index=False)
 
 
-reponames = ["gradle", "neo4j", "elasticsearch"]
+def read_repo_names():
+    with open("projects.txt") as f:
+        projects = f.readlines()
+        return [p.strip() for p in projects]
+
+
+reponames = read_repo_names()
 
 for reponame in reponames:
     repo_processor = RepositoryProcessor(reponame)
