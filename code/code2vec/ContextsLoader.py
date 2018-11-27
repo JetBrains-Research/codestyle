@@ -41,6 +41,8 @@ class ContextsLoader:
                 cnt += 1
             del df
 
+        vals, counts = np.unique(ids, return_counts=True)
+        print(vals[counts > 1])
         return ids, paths_before, paths_after, max(ids) + 1
 
     def unpack_and_trim(self, paths, output):
