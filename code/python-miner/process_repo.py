@@ -19,6 +19,10 @@ class RepositoryProcessor:
         path = entry.a_path if entry.change_type == 'D' else entry.b_path
         return path.endswith(".java")
 
+    @staticmethod
+    def remove_commas(content):
+        return content.replace(",", "")
+
     def extract_change_info(self, commit, entry):
         old_blob_id = None
         new_blob_id = None
@@ -50,9 +54,9 @@ class RepositoryProcessor:
                 'old_content': old_blob_id,
                 'new_content': new_blob_id,
                 'commit_id': str(commit),
-                'author_name': commit.author.name,
+                'author_name': self.remove_commas(commit.author.name),
                 'author_email': commit.author.email,
-                'committer_name': commit.committer.name,
+                'committer_name': self.remove_commas(commit.committer.name),
                 'committer_email': commit.committer.email,
                 'author_time': commit.authored_date,
                 'committer_time': commit.committed_date}
