@@ -7,7 +7,7 @@ class PackDataset:
     def __init__(self, config, train_files, test_files):
         self.config = config
         self.mapping = {}
-        self.entities_cnt = 1
+        self.entities_cnt = 0
         self.train_entities, self.train_packs = self.read_files(train_files, shuffle=True)
         self.test_entities, self.test_packs = self.read_files(test_files)
         self.train_entities_placeholder, self.train_packs_placeholder = \
@@ -33,8 +33,8 @@ class PackDataset:
                     items = list(map(int, line.split(',')))
                     entity = items[0]
                     if entity not in self.mapping:
-                        self.mapping[entity] = self.entities_cnt
                         self.entities_cnt += 1
+                        self.mapping[entity] = self.entities_cnt
                     entities.append(self.mapping[entity])
                     packs.append(items[1:])
 

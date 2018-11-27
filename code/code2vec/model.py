@@ -9,7 +9,7 @@ from loader import Loader
 
 # noinspection PyUnresolvedReferences
 class Model:
-    topk = 7
+    topk = 16
     num_batches_to_log = 100
 
     def __init__(self, config):
@@ -42,6 +42,7 @@ class Model:
         self.pack_dataset = PackDataset(self.config, self.config.TRAIN_PATH, self.config.TEST_PATH)
         self.TRAIN_EXAMPLES = self.pack_dataset.train_examples
         self.TEST_EXAMPLES = self.pack_dataset.test_examples
+        self.config.ENTITIES_VOCAB_SIZE = self.pack_dataset.entities_cnt
         print('Created pack dataset')
         self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
         print('Created contexts loader')
