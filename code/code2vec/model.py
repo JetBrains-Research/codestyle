@@ -142,9 +142,10 @@ class Model:
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
 
-            confuse_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE),
+            confuse_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE + 1),
                                       dtype=np.int32)
-            rank_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.float32)
+            rank_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE + 1),
+                                   dtype=np.float32)
             class_sizes = np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
 
             start_time = time.time()
@@ -202,7 +203,7 @@ class Model:
     def compute_confuse_matrix(results, confuse_matrix):
         for original_entity, top_indices in results:
             prediction = top_indices[0]
-            confuse_matrix[original_entity - 1][prediction - 1] += 1
+            confuse_matrix[original_entity - 1][prediction] += 1
         return confuse_matrix
 
     @staticmethod
@@ -210,7 +211,7 @@ class Model:
         for original_entity, top_indices in results:
             class_sizes[original_entity - 1] += 1
             for i, prediction in enumerate(top_indices):
-                rank_matrix[original_entity - 1][prediction - 1] += i + 1
+                rank_matrix[original_entity - 1][prediction] += i + 1
         return rank_matrix
 
     @staticmethod
