@@ -11,7 +11,7 @@ from loader import Loader
 # noinspection PyUnresolvedReferences
 class Model:
     topk = 10
-    num_batches_to_log = 4
+    num_batches_to_log = 100
 
     def __init__(self, config):
         self.config = config

@@ -10,7 +10,7 @@ class Config:
         config = Config()
         config.NUM_EPOCHS = 10
         config.SAVE_EVERY_EPOCHS = 1
-        config.BATCH_SIZE = 4
+        config.BATCH_SIZE = 128
         config.TEST_BATCH_SIZE = config.BATCH_SIZE
         config.READING_BATCH_SIZE = 1300 * 4
         config.NUM_BATCHING_THREADS = 2
@@ -19,7 +19,7 @@ class Config:
         config.PATH_MAX = 500
         config.PATH_MIN = 4
         config.TOKENS_VOCAB_SIZE = 690708
-        config.ENTITIES_VOCAB_SIZE = 400
+        config.ENTITIES_VOCAB_SIZE = 10
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 8
         config.PACK_SIZE = 16
