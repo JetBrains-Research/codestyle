@@ -19,9 +19,12 @@ class ContextsLoader:
         self.after_table = self.create_table(self.paths_after)
 
     def read_files(self, files):
-        ids = []
-        paths_before = []
-        paths_after = []
+        size = sum(len(open(filename).readlines()) for filename in files)
+
+        ids = np.zeros(size)
+        paths_before = np.zeros((size, 200, 3))
+        paths_after = np.zeros((size, 200, 3))
+        cnt = 0
 
         for i, file in enumerate(files):
             print('Reading file #{}/{}'.format(i + 1, len(files)))
@@ -32,25 +35,25 @@ class ContextsLoader:
                 # if cnt_before + cnt_after < self.config.PATH_MIN or \
                 #         self.config.PATH_MAX < cnt_before or self.config.PATH_MAX < cnt_after:
                 #     continue
-                ids.append(index)
-                paths_before.append(self.unpack_and_trim(row['pathsBefore']))
-                paths_after.append(self.unpack_and_trim(row['pathsAfter']))
+                ids[cnt] = index
+                self.unpack_and_trim(row['pathsBefore'], paths_before[cnt])
+                self.unpack_and_trim(row['pathsAfter'], paths_after[cnt])
+                cnt += 1
             del df
 
-        return np.array(ids), np.array(paths_before), np.array(paths_after), max(ids) + 1
+        return ids, paths_before, paths_after, max(ids) + 1
 
-    def unpack_and_trim(self, paths):
+    def unpack_and_trim(self, paths, output):
         if type(paths) is str:
             paths = paths.split(';')
             paths = list(map(lambda p: list(map(int, p.split())), paths))
-            if len(paths) > self.config.MAX_CONTEXTS:
-                np.random.shuffle(paths)
-                paths = paths[:self.config.MAX_CONTEXTS]
+            # if len(paths) > self.config.MAX_CONTEXTS:
+            #     np.random.shuffle(paths)
+            #     paths = paths[:self.config.MAX_CONTEXTS]
         else:
             paths = []
-        if len(paths) < self.config.MAX_CONTEXTS:
-            paths.extend([empty_context for _ in range(self.config.MAX_CONTEXTS - len(paths))])
-        return paths
+        for i in range(min(len(paths), self.config.MAX_CONTEXTS)):
+            output[i] = paths[i]
 
     def ids_mapping(self, ids):
         return tf.contrib.lookup.HashTable(
