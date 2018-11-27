@@ -19,7 +19,7 @@ class ContextsLoader:
         self.after_table = self.create_table(self.paths_after)
 
     def read_files(self, files):
-        size = sum(len(open(filename).readlines()) for filename in files)
+        size = sum(len(open(filename).readlines()) - 1 for filename in files)
 
         ids = np.zeros(size)
         paths_before = np.zeros((size, 200, 3))
@@ -41,8 +41,6 @@ class ContextsLoader:
                 cnt += 1
             del df
 
-        vals, counts = np.unique(ids, return_counts=True)
-        print(vals[counts > 1])
         return ids, paths_before, paths_after, max(ids) + 1
 
     def unpack_and_trim(self, paths, output):
