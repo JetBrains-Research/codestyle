@@ -13,6 +13,7 @@ class Model:
     num_batches_to_log = 100
 
     def __init__(self, config):
+        np.set_printoptions(precision=3, suppress=True)
         self.config = config
         self.sess = tf.Session()
 
