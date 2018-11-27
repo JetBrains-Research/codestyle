@@ -19,6 +19,8 @@ class PackDataset:
         self.handle = tf.placeholder(tf.string, shape=[])
         self.next_train = self.train_iterator.get_next()
         self.next_test = self.test_iterator.get_next()
+        self.train_examples = len(self.train_entities)
+        self.test_examples = len(self.test_entities)
 
     def read_files(self, files, shuffle=False):
         entities = []

@@ -11,7 +11,7 @@ from loader import Loader
 # noinspection PyUnresolvedReferences
 class Model:
     topk = 10
-    num_batches_to_log = 100
+    num_batches_to_log = 4
 
     def __init__(self, config):
         self.config = config
@@ -21,7 +21,6 @@ class Model:
         self.eval_queue = None
         self.predict_queue = None
 
-        self.eval_placeholder = None
         self.predict_placeholder = None
         self.predict_top_indices_op, self.predict_top_scores_op, \
         self.predict_original_entities_op, self.attention_weights_op = None, None, None, None
@@ -39,18 +38,27 @@ class Model:
     def close_session(self):
         self.sess.close()
 
+    def init_loaders(self):
+        self.pack_dataset = PackDataset(self.config, [self.config.TRAIN_PATH], [self.config.TEST_PATH])
+        self.TRAIN_EXAMPLES = self.pack_dataset.train_examples
+        self.TEST_EXAMPLES = self.pack_dataset.test_examples
+        print('Created pack dataset')
+        self.contexts_loader = ContextsLoader(self.config, [self.config.CHANGES_PATH])
+        print('Created contexts loader')
+
     def train(self):
         print('Starting training')
         start_time = time.time()
 
-        self.pack_dataset = PackDataset(self.config, [self.config.TRAIN_PATH], [self.config.TEST_PATH])
-        print('Created pack dataset')
-        self.contexts_loader = ContextsLoader(self.config, [self.config.CHANGES_PATH])
-        print('Created contexts loader')
-        packs, entities = self.pack_dataset.next_train
+        self.init_loaders()
 
-        optimizer, train_loss = self.build_training_graph(packs, entities, self.contexts_loader)
+        optimizer, train_loss = self.build_training_graph()
         print('Built training graph')
+
+        self.predict_top_indices_op, self.predict_top_scores_op, \
+        self.predict_original_entities_op, self.attention_weights_op = self.build_test_graph()
+        print('Built test graph')
+
         self.saver = tf.train.Saver(max_to_keep=self.config.MAX_TO_KEEP)
         self.summary_writer = tf.summary.FileWriter('logs/', graph=self.sess.graph)
 
@@ -66,33 +74,31 @@ class Model:
         sum_loss = 0
         multi_batch_start_time = time.time()
         num_batches_to_evaluate = max(int(
-            self.config.NUM_EXAMPLES / self.config.BATCH_SIZE * self.config.SAVE_EVERY_EPOCHS), 1)
+            self.TRAIN_EXAMPLES / self.config.BATCH_SIZE * self.config.SAVE_EVERY_EPOCHS), 1)
 
-        for epoch in range(self.config.NUM_EPOCHS):
-            batch_num += 1
-            print(batch_num)
-            _, batch_loss = self.sess.run([optimizer, train_loss])
-            sum_loss += batch_loss
-            if batch_num % self.num_batches_to_log == 0:
-                self.trace(sum_loss, batch_num, multi_batch_start_time)
-                print('Number of waiting examples in queue: %d' % self.sess.run(
-                    "shuffle_batch/random_shuffle_queue_Size:0"))
-                sum_loss = 0
-                multi_batch_start_time = time.time()
+        try:
+            while True:
+                batch_num += 1
+                _, batch_loss = self.sess.run([optimizer, train_loss])
+                sum_loss += batch_loss
+                if batch_num % self.num_batches_to_log == 0:
+                    self.trace(sum_loss, batch_num, multi_batch_start_time)
+                    sum_loss = 0
+                    multi_batch_start_time = time.time()
 
-            if batch_num % num_batches_to_evaluate == 0:
-                epoch_num = int((batch_num / num_batches_to_evaluate) * self.config.SAVE_EVERY_EPOCHS)
-                save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
-                self.save_model(self.sess, save_target)
-                print('Saved after %d epochs in: %s' % (epoch_num, save_target))
-                print('------------------------------------')
-                print('Results of evaluation on test data:')
-                self.evaluate_and_print_results(self.config.TEST_PATH, epoch_num)
-                print('------------------------------------')
-                print('------------------------------------')
-                print('Results of evaluation on train data:')
-                self.evaluate_and_print_results(self.config.TRAIN_PATH, epoch_num)
-                print('------------------------------------')
+                if batch_num % num_batches_to_evaluate == 0:
+                    epoch_num = int((batch_num / num_batches_to_evaluate) * self.config.SAVE_EVERY_EPOCHS)
+                    save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
+                    self.save_model(self.sess, save_target)
+                    print('Saved after %d epochs in: %s' % (epoch_num, save_target))
+                    print('------------------------------------')
+                    print('Results of evaluation on test data:')
+                    self.evaluate_and_print_results(epoch_num)
+                    print('------------------------------------')
+
+        except tf.errors.OutOfRangeError:
+            print("Done training")
+
 
         if self.config.SAVE_PATH:
             self.save_model(self.sess, self.config.SAVE_PATH)
@@ -108,30 +114,25 @@ class Model:
                                                                               self.config.BATCH_SIZE * self.num_batches_to_log / (
                                                                                   multi_batch_elapsed if multi_batch_elapsed > 0 else 1)))
 
-    def evaluate(self, file_path):
+    def evaluate_and_print_results(self, epoch_num):
+        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate()
+        print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
+        print('Per class statistics after ' + str(epoch_num) + ' epochs:')
+        for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
+            print('Class ' + str(i + 1) +
+                  ': precision: ' + str(p) +
+                  ', recall: ' + str(r) +
+                  ', F1: ' + str(f))
+        print('Mean precision: ' + str(np.mean(precision)) +
+              ', mean recall: ' + str(np.mean(recall)) +
+              ', mean F1: ' + str(np.mean(f1)))
+        print('Confuse matrix:')
+        print(confuse_matrix)
+        print('Rank matrix:')
+        print(rank_matrix)
+
+    def evaluate(self):
         eval_start_time = time.time()
-        if self.eval_queue is None:
-            self.eval_queue = PathContextReader.PathContextReader(config=self.config, file_path=file_path,
-                                                                  is_evaluating=True)
-            self.predict_top_indices_op, self.predict_top_scores_op, \
-            self.predict_original_entities_op, self.attention_weights_op = \
-                self.build_test_graph(self.eval_queue.get_filtered_batches())
-            self.saver = tf.train.Saver()
-
-        if self.config.LOAD_PATH and not self.config.TRAIN_PATH:
-            self.initialize_session_variables(self.sess)
-            self.load_model(self.sess)
-            if self.config.RELEASE:
-                release_name = self.config.LOAD_PATH + '.release'
-                print('Releasing model, output model: %s' % release_name)
-                self.saver.save(self.sess, release_name)
-                return None
-
-        if self.eval_data_lines is None:
-            print('Loading evaluation data from: ' + file_path)
-            self.eval_data_lines = common.load_file_lines(file_path)
-            print('Done loading evaluation data')
-
         with open('log.txt', 'w') as output_file:
             num_correct_predictions = np.zeros(self.topk)
             total_predictions = 0
@@ -140,6 +141,7 @@ class Model:
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32), \
                 np.zeros(self.config.ENTITIES_VOCAB_SIZE, dtype=np.int32)
+
             confuse_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE),
                                       dtype=np.int32)
             rank_matrix = np.zeros((self.config.ENTITIES_VOCAB_SIZE, self.config.ENTITIES_VOCAB_SIZE), dtype=np.float32)
@@ -147,12 +149,15 @@ class Model:
 
             start_time = time.time()
 
-            for batch in common.split_to_batches(self.eval_data_lines, self.config.TEST_BATCH_SIZE):
+            n_test_batches = max(int(self.TEST_EXAMPLES / self.config.BATCH_SIZE), 1)
+
+            for _ in range(n_test_batches):
                 top_indices, top_scores, original_entities = self.sess.run(
-                    [self.predict_top_indices_op, self.predict_top_scores_op, self.predict_original_entities_op],
-                    feed_dict={self.eval_placeholder: batch})
+                    [self.predict_top_indices_op, self.predict_top_scores_op, self.predict_original_entities_op])
+
+                print(original_entities.shape)
                 # Flatten original names from [[]] to []
-                original_entities = [w for l in original_entities for w in l]
+                # original_entities = [w for l in original_entities for w in l]
 
                 num_correct_predictions = self.update_correct_predictions(num_correct_predictions, output_file,
                                                                           zip(original_entities, top_indices))
@@ -168,8 +173,7 @@ class Model:
                 if total_prediction_batches % self.num_batches_to_log == 0:
                     elapsed = time.time() - start_time
                     # start_time = time.time()
-                    self.trace_evaluation(output_file, num_correct_predictions, total_predictions, elapsed,
-                                          len(self.eval_data_lines))
+                    self.trace_evaluation(total_predictions, elapsed, self.TEST_EXAMPLES)
 
             print('Done testing, epoch reached')
             output_file.write(str(num_correct_predictions / total_predictions) + '\n')
@@ -183,23 +187,6 @@ class Model:
         self.eval_data_lines = None
 
         return num_correct_predictions / total_predictions, precision, recall, f1, confuse_matrix, rank_matrix
-
-    def evaluate_and_print_results(self, file_path, epoch_num):
-        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate(file_path)
-        print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
-        print('Per class statistics after ' + str(epoch_num) + ' epochs:')
-        for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
-            print('Class ' + str(i + 1) +
-                  ': precision: ' + str(p) +
-                  ', recall: ' + str(r) +
-                  ', F1: ' + str(f))
-        print('Mean precision: ' + str(np.mean(precision)) +
-              ', mean recall: ' + str(np.mean(recall)) +
-              ', mean F1: ' + str(np.mean(f1)))
-        print('Confuse matrix:')
-        print(confuse_matrix)
-        print('Rank matrix:')
-        print(rank_matrix)
 
     @staticmethod
     def update_per_class_stats(results, true_positive, false_positive, false_negative):
@@ -235,7 +222,7 @@ class Model:
         return precision, recall, f1
 
     @staticmethod
-    def trace_evaluation(output_file, correct_predictions, total_predictions, elapsed, total_examples):
+    def trace_evaluation(total_predictions, elapsed, total_examples):
         state_message = 'Evaluated %d/%d examples...' % (total_predictions, total_examples)
         throughput_message = "Prediction throughput: %d samples/sec" % int(
             total_predictions / (elapsed if elapsed > 0 else 1))
@@ -285,12 +272,13 @@ class Model:
                                     name='DECISION_OUT', trainable=trainable)
         return layer_out
 
-    def build_training_graph(self, packs, entities, contexts_loader):
+    def build_training_graph(self):
         # packs -> (batch, pack)
         # entities -> (batch, )
+        packs, entities = self.pack_dataset.next_train
 
         # (batch, pack, dim), (batch, pack, dim)
-        before_contexts, after_contexts = contexts_loader.get(packs)
+        before_contexts, after_contexts = self.contexts_loader.get(packs)
 
         with tf.variable_scope('model'):
             initializer = tf.contrib.layers.variance_scaling_initializer(factor=1.0, mode='FAN_OUT', uniform=True)
@@ -305,17 +293,14 @@ class Model:
             # (batch, pack, dim)
             weighted_average_contexts, _ = \
                 self.calculate_weighted_contexts(contexts_embed, None)
-            print(weighted_average_contexts.shape)
 
             # (batch, dim)
             weighted_average_methods, _ = \
                 self.calculate_weighted_methods(weighted_average_contexts)
-            print(weighted_average_methods.shape)
 
             # (batch, entities)
             logits = self.build_simple_decision_function(weighted_average_methods)
 
-            print(logits.shape)
             batch_size = tf.to_float(tf.shape(entities)[0])
             loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
                 labels=tf.reshape(entities, [-1]),
@@ -325,33 +310,36 @@ class Model:
 
         return optimizer, loss
 
-    def build_test_graph(self, input_tensors, normalize_scores=False):
+    def build_test_graph(self,normalize_scores=False):
+        # packs -> (batch, pack)
+        # entities -> (batch, )
+        packs, entities = self.pack_dataset.next_test
+
+        # (batch, pack, dim), (batch, pack, dim)
+        before_contexts, after_contexts = self.contexts_loader.get(packs)
+
         with tf.variable_scope('model', reuse=self.get_should_reuse_variables()):
             tokens_vocab, paths_vocab = self.get_vocabs(trainable=False)
-            entities_input, \
-            added_starts, added_paths, added_ends, added_mask, \
-            deleted_starts, deleted_paths, deleted_ends, deleted_mask = input_tensors
-            added = self.create_dicts(added_starts, added_paths, added_ends, added_mask)
-            deleted = self.create_dicts(deleted_starts, deleted_paths, deleted_ends, deleted_mask)
-            
+
             # (batch, pack, max_contexts * 2, dim)
             # contexts_embed, valid_mask = \
             #     self.build_contexts(tokens_vocab, paths_vocab, added, deleted, trainable=False)
             contexts_embed = \
-                self.build_contexts(tokens_vocab, paths_vocab, added, deleted, trainable=False)
+                self.build_contexts(tokens_vocab, paths_vocab, before_contexts, after_contexts, trainable=False)
 
             # (batch, pack, dim)
             weighted_average_contexts, _ = \
                 self.calculate_weighted_contexts(contexts_embed, None, trainable=False)
             # (batch, dim)
-            weighted_average_methods, _ = \
+            weighted_average_methods, attention_weights = \
                 self.calculate_weighted_methods(weighted_average_contexts, trainable=False)
+
             # (batch, entities)
             cos = self.build_simple_decision_function(weighted_average_methods, trainable=False)
 
         topk_candidates = tf.nn.top_k(cos, k=tf.minimum(self.topk, self.config.ENTITIES_VOCAB_SIZE))
         top_indices = tf.to_int64(topk_candidates.indices)
-        original_entities = entities_input
+        original_entities = entities
         top_scores = topk_candidates.values
         if normalize_scores:
             top_scores = tf.nn.softmax(top_scores)
@@ -427,45 +415,6 @@ class Model:
         weighted_average_contexts = tf.reduce_sum(tf.multiply(method_embed, attention_weights), axis=1)
 
         return weighted_average_contexts, attention_weights
-
-    def predict(self, predict_data_lines):
-        if self.predict_queue is None:
-            self.predict_queue = PathContextReader.PathContextReader(config=self.config,
-                                                                     file_path=self.config.TEST_PATH,
-                                                                     is_evaluating=True)
-            self.predict_placeholder = self.predict_queue.get_input_placeholder()
-            self.predict_top_indices_op, self.predict_top_scores_op, \
-            self.predict_original_entities_op, self.attention_weights_op = \
-                self.build_test_graph(self.predict_queue.get_filtered_batches(), normalize_scores=True)
-
-            self.initialize_session_variables(self.sess)
-            self.saver = tf.train.Saver()
-            self.load_model(self.sess)
-
-        results = []
-        for batch in common.split_to_batches(predict_data_lines, 1):
-            top_words, top_scores, original_names, attention_weights, source_strings, path_strings, target_strings = self.sess.run(
-                [self.predict_top_words_op, self.predict_top_values_op, self.predict_original_names_op,
-                 self.attention_weights_op, self.predict_source_string, self.predict_path_string,
-                 self.predict_path_target_string],
-                feed_dict={self.predict_placeholder: batch})
-            top_words, original_names = common.binary_to_string_matrix(top_words), common.binary_to_string_matrix(
-                original_names)
-            # Flatten original names from [[]] to []
-            attention_per_path = self.get_attention_per_path(source_strings, path_strings, target_strings,
-                                                             attention_weights)
-            original_names = [w for l in original_names for w in l]
-            results.append((original_names[0], top_words[0], top_scores[0], attention_per_path))
-        return results
-
-    def get_attention_per_path(self, source_strings, path_strings, target_strings, attention_weights):
-        attention_weights = np.squeeze(attention_weights)  # (max_contexts, )
-        attention_per_context = {}
-        for source, path, target, weight in zip(source_strings, path_strings, target_strings, attention_weights):
-            string_triplet = (
-                common.binary_to_string(source), common.binary_to_string(path), common.binary_to_string(target))
-            attention_per_context[string_triplet] = weight
-        return attention_per_context
 
     def save_model(self, sess, path):
         self.saver.save(sess, path)

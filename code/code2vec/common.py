@@ -8,9 +8,9 @@ class Config:
     @staticmethod
     def get_default_config(args):
         config = Config()
-        config.NUM_EPOCHS = 60
-        config.SAVE_EVERY_EPOCHS = 3
-        config.BATCH_SIZE = 128
+        config.NUM_EPOCHS = 10
+        config.SAVE_EVERY_EPOCHS = 1
+        config.BATCH_SIZE = 4
         config.TEST_BATCH_SIZE = config.BATCH_SIZE
         config.READING_BATCH_SIZE = 1300 * 4
         config.NUM_BATCHING_THREADS = 2
@@ -26,7 +26,6 @@ class Config:
         config.MAX_TO_KEEP = 10
         config.DATASET_FOLDER = 'dataset/'
         # Automatically filled, do not edit:
-        config.NUM_EXAMPLES = args.size
         config.TRAIN_PATH = args.data_path
         config.TEST_PATH = args.test_path
         config.CHANGES_PATH = args.changes_path
@@ -80,7 +79,6 @@ class Config:
         self.SAVE_PATH = ''
         self.LOAD_PATH = ''
         self.MAX_TO_KEEP = 0
-        self.NUM_EXAMPLES = 0
         self.DATASET_FOLDER = ''
         self.RELEASE = False
 
