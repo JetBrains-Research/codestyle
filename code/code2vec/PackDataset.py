@@ -42,8 +42,8 @@ class PackDataset:
         packs = np.array(packs, dtype=np.int32)
         if shuffle:
             perm = np.random.permutation(len(entities))
-            # entities = entities[perm]
-            # packs = packs[perm]
+            entities = entities[perm]
+            packs = packs[perm]
         return entities, packs
 
     def create_placeholders(self, entities, packs):
