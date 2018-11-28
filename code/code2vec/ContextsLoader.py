@@ -12,18 +12,15 @@ class ContextsLoader:
         self.config = config
         self.ids, self.paths_before, self.paths_after, self.dim_ids = self.read_files(files)
         print('Loaded all files')
-        self.default_value = tf.constant([empty_context for _ in range(self.config.MAX_CONTEXTS)], dtype=tf.int32)
+        # self.default_value = tf.constant([empty_context for _ in range(self.config.MAX_CONTEXTS)], dtype=tf.int32)
         self.size = len(self.ids)
-        self.ids_table = self.ids_mapping(self.ids)
-        self.before_table = self.create_table(self.paths_before)
-        self.after_table = self.create_table(self.paths_after)
 
     def read_files(self, files):
         size = sum(len(open(filename).readlines()) - 1 for filename in files)
 
-        ids = np.zeros(size)
-        paths_before = np.zeros((size, 200, 3))
-        paths_after = np.zeros((size, 200, 3))
+        ids = np.zeros(size, dtype=np.int32)
+        paths_before = np.zeros((size, self.config.MAX_CONTEXTS, 3), np.int32)
+        paths_after = np.zeros((size, self.config.MAX_CONTEXTS, 3), np.int32)
         cnt = 0
 
         for i, file in enumerate(files):
@@ -46,7 +43,11 @@ class ContextsLoader:
                 cnt += 1
             del df
 
-        return ids, paths_before, paths_after, max(ids) + 1
+        reverse_ids = np.ones(max(ids) + 1, dtype=np.int32) * -1
+        for i, ind in enumerate(ids):
+            reverse_ids[ind] = i
+
+        return reverse_ids, paths_before, paths_after, max(ids) + 1
 
     def unpack_and_trim(self, paths, output, restricted):
         if type(paths) is str:
@@ -61,19 +62,12 @@ class ContextsLoader:
         for i in range(min(len(paths), self.config.MAX_CONTEXTS)):
             output[i] = paths[i]
 
-    def ids_mapping(self, ids):
-        return tf.contrib.lookup.HashTable(
-            tf.contrib.lookup.KeyValueTensorInitializer(
-                ids, np.arange(self.size), key_dtype=tf.int32, value_dtype=tf.int32
-            ),
-            -1,
-            name='IDS_LOOKUP'
-        )
-
-    def create_table(self, paths):
-        return tf.constant(paths, dtype=tf.int32)
-
-    def get(self, indices):
-        indices = self.ids_table.lookup(indices)
-        return tf.gather(self.before_table, indices, name='GATHER_BEFORE'), \
-               tf.gather(self.after_table, indices, name='GATHER_AFTER')
+    def get(self, batched_indices):
+        batch_size = len(batched_indices)
+        paths_before = np.zeros((batch_size, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
+        paths_after = np.zeros((batch_size, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
+        for i, indices in enumerate(batched_indices):
+            indices = self.ids[indices]
+            paths_before[i] = self.paths_before[indices]
+            paths_after[i] = self.paths_after[indices]
+        return paths_before, paths_after

@@ -27,13 +27,13 @@ class Model:
 
         if config.LOAD_PATH:
             self.load_model(sess=None)
-        else:
-            loader = Loader(config.DATASET_FOLDER)
-            self.methods = loader.load_methods()
-            self.nodes = loader.load_nodes()
-            self.tokens = loader.load_tokens()
-            self.paths = loader.load_paths()
-            print('Dataset information loaded.')
+        # else:
+        #     loader = Loader(config.DATASET_FOLDER)
+        #     self.methods = loader.load_methods()
+        #     self.nodes = loader.load_nodes()
+        #     self.tokens = loader.load_tokens()
+        #     self.paths = loader.load_paths()
+        #     print('Dataset information loaded.')
 
     def close_session(self):
         self.sess.close()
@@ -43,6 +43,7 @@ class Model:
         self.TRAIN_EXAMPLES = self.pack_dataset.train_examples
         self.TEST_EXAMPLES = self.pack_dataset.test_examples
         self.config.ENTITIES_VOCAB_SIZE = self.pack_dataset.entities_cnt
+        self.topk = self.config.ENTITIES_VOCAB_SIZE + 1
         print('Created pack dataset')
         self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
         print('Created contexts loader')
@@ -69,38 +70,36 @@ class Model:
         if self.config.LOAD_PATH:
             self.load_model(self.sess)
 
-        self.pack_dataset.init_iterators(self.sess)
-        print('Initialized iterators')
+        for epoch in range(1, self.config.NUM_EPOCHS + 1):
+            print("Epoch #{}".format(epoch))
 
-        batch_num = 0
-        sum_loss = 0
-        multi_batch_start_time = time.time()
-        num_batches_to_evaluate = max(int(
-            self.TRAIN_EXAMPLES / self.config.BATCH_SIZE * self.config.SAVE_EVERY_EPOCHS), 1)
+            self.pack_dataset.init_epoch()
+            batch_num = 0
+            sum_loss = 0
+            multi_batch_start_time = time.time()
 
-        try:
-            while True:
+            for batched_packs, batched_entities in self.pack_dataset.train_generator:
                 batch_num += 1
-                _, batch_loss = self.sess.run([optimizer, train_loss])
+                packs_before, packs_after = self.contexts_loader.get(batched_packs)
+                _, batch_loss = self.sess.run([optimizer, train_loss], feed_dict={
+                    self.pack_dataset.packs_before_placeholder: packs_before,
+                    self.pack_dataset.packs_after_placeholder: packs_after,
+                    self.pack_dataset.entities_placeholder: batched_entities
+                })
                 sum_loss += batch_loss
                 if batch_num % self.num_batches_to_log == 0:
                     self.trace(sum_loss, batch_num, multi_batch_start_time)
                     sum_loss = 0
                     multi_batch_start_time = time.time()
 
-                if batch_num % num_batches_to_evaluate == 0:
-                    epoch_num = int((batch_num / num_batches_to_evaluate) * self.config.SAVE_EVERY_EPOCHS)
-                    save_target = self.config.SAVE_PATH + '_iter' + str(epoch_num)
-                    self.save_model(self.sess, save_target)
-                    print('Saved after %d epochs in: %s' % (epoch_num, save_target))
-                    print('------------------------------------')
-                    print('Results of evaluation on test data:')
-                    self.evaluate_and_print_results(epoch_num)
-                    print('------------------------------------')
-
-        except tf.errors.OutOfRangeError:
-            print("Done training")
-
+            if epoch % self.config.SAVE_EVERY_EPOCHS == 0:
+                save_target = self.config.SAVE_PATH + '_iter' + str(epoch)
+                self.save_model(self.sess, save_target)
+                print('Saved after %d epochs in: %s' % (epoch, save_target))
+                print('------------------------------------')
+                print('Results of evaluation on test data:')
+                self.evaluate_and_print_results(epoch)
+                print('------------------------------------')
 
         if self.config.SAVE_PATH:
             self.save_model(self.sess, self.config.SAVE_PATH)
@@ -152,14 +151,15 @@ class Model:
 
             start_time = time.time()
 
-            n_test_batches = max(int(self.TEST_EXAMPLES / self.config.BATCH_SIZE), 1)
-
-            for _ in range(n_test_batches):
+            for batched_packs, batched_entities in self.pack_dataset.test_generator:
+                packs_before, packs_after = self.contexts_loader.get(batched_packs)
                 top_indices, top_scores, original_entities = self.sess.run(
-                    [self.predict_top_indices_op, self.predict_top_scores_op, self.predict_original_entities_op])
-
-                # Flatten original names from [[]] to []
-                # original_entities = [w for l in original_entities for w in l]
+                    [self.predict_top_indices_op, self.predict_top_scores_op, self.predict_original_entities_op],
+                    feed_dict={
+                        self.pack_dataset.packs_before_placeholder: packs_before,
+                        self.pack_dataset.packs_after_placeholder: packs_after,
+                        self.pack_dataset.entities_placeholder: batched_entities
+                    })
 
                 num_correct_predictions = self.update_correct_predictions(num_correct_predictions, output_file,
                                                                           zip(original_entities, top_indices))
@@ -275,12 +275,12 @@ class Model:
         return layer_out
 
     def build_training_graph(self):
-        # packs -> (batch, pack)
-        # entities -> (batch, )
-        packs, entities = self.pack_dataset.next_train
-
-        # (batch, pack, dim), (batch, pack, dim)
-        before_contexts, after_contexts = self.contexts_loader.get(packs)
+        # packs -> (batch, )
+        # entities -> (batch, pack, max_contexts, dim)
+        before_contexts, after_contexts, entities = \
+            self.pack_dataset.packs_before_placeholder, \
+            self.pack_dataset.packs_after_placeholder, \
+            self.pack_dataset.entities_placeholder
 
         with tf.variable_scope('model'):
             initializer = tf.contrib.layers.variance_scaling_initializer(factor=1.0, mode='FAN_OUT', uniform=True)
@@ -312,13 +312,13 @@ class Model:
 
         return optimizer, loss
 
-    def build_test_graph(self,normalize_scores=False):
-        # packs -> (batch, pack)
-        # entities -> (batch, )
-        packs, entities = self.pack_dataset.next_test
-
-        # (batch, pack, dim), (batch, pack, dim)
-        before_contexts, after_contexts = self.contexts_loader.get(packs)
+    def build_test_graph(self, normalize_scores=False):
+        # packs -> (batch, )
+        # entities -> (batch, pack, max_contexts, dim)
+        before_contexts, after_contexts, entities = \
+            self.pack_dataset.packs_before_placeholder, \
+            self.pack_dataset.packs_after_placeholder, \
+            self.pack_dataset.entities_placeholder
 
         with tf.variable_scope('model', reuse=self.get_should_reuse_variables()):
             tokens_vocab, paths_vocab = self.get_vocabs(trainable=False)
@@ -381,14 +381,14 @@ class Model:
         transformed_embed = tf.layers.dense(context_embed, self.config.EMBEDDINGS_SIZE, activation=None,
                                             name='TRANSFORM', trainable=trainable)
 
-        return transformed_embed#, valid_mask
+        return transformed_embed  # , valid_mask
 
     def calculate_weighted_contexts(self, context_embed, valid_mask, trainable=True):
         # input -> (batch, pack, max_contexts * 2, dim)
 
         # (batch, pack, max_contexts * 2, 1)
         contexts_weights = tf.layers.dense(context_embed, 1, activation=None,
-                                          name='ATTENTION_CONTEXTS', trainable=trainable)
+                                           name='ATTENTION_CONTEXTS', trainable=trainable)
 
         # (batch, pack, max_contexts * 2)
         # mask = tf.log(valid_mask)
