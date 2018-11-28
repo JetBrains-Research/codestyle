@@ -1,6 +1,6 @@
 package miningtool.common
 
-import java.io.Reader
+import java.io.InputStream
 
 abstract class Node {
     abstract fun getTypeLabel(): String
@@ -22,5 +22,5 @@ data class Path(val upwardNodes: List<Node>, val downwardNodes: List<Node>)
 data class PathContext(val startToken: String, val path: Path, val endToken: String)
 
 abstract class Parser {
-    abstract fun parse(content: Reader): Node?
+    abstract fun parse(content: InputStream): Node?
 }
