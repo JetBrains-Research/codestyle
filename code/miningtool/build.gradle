@@ -12,6 +12,7 @@ buildscript {
 
 apply plugin: 'java'
 apply plugin: 'me.champeau.gradle.antlr4'
+apply plugin: 'idea'
 
 apply plugin: 'kotlin'
 apply plugin: 'application'
@@ -24,6 +25,8 @@ repositories {
     mavenCentral()
 }
 
+def generatedSourcesPath = "src/main/generated"
+
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     // https://mvnrepository.com/artifact/com.github.gumtreediff/core
@@ -35,10 +38,6 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.5'
     testCompile "junit:junit:4.11"
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
-
-
-//    compile group: 'org.antlr', name: 'antlr4-runtime', version: '4.7.1'
-//    compile files("src/main/generated")
 }
 
 task wrapper(type: Wrapper) {
@@ -60,13 +59,21 @@ configurations {
     compile.extendsFrom antlr4
 }
 
-sourceSets {
-    generated {
-        resources {
-            srcDirs += "src/main/generated"
-        }
+//sourceSets {
+//    generated {
+//        source {
+//            srcDirs += generatedSourcesPath
+//        }
+//    }
+//}
+
+
+
+sourceSets.main.java.srcDir file(generatedSourcesPath)
+
+
+idea {
+    module {
+        generatedSourceDirs += file(generatedSourcesPath)
     }
 }
-
-compileJava.source sourceSets.generated.resources.srcDirs
-compileKotlin.source sourceSets.generated.resources.srcDirs
