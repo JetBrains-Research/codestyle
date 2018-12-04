@@ -4,7 +4,11 @@ import com.github.gumtreediff.tree.ITree
 import com.github.gumtreediff.tree.TreeContext
 import miningtool.common.Node
 
-class GumTreeJavaNode(val wrappedNode: ITree, val context: TreeContext, val parent: GumTreeJavaNode?) : Node() {
+class GumTreeJavaNode(val wrappedNode: ITree, val context: TreeContext, val parent: GumTreeJavaNode?) : Node {
+    override fun isLeaf(): Boolean {
+        return childrenList.isEmpty()
+    }
+
     private val childrenList: List<GumTreeJavaNode> by lazy {
         wrappedNode.children.map { GumTreeJavaNode(it, context, this) }
     }

@@ -3,7 +3,11 @@ package miningtool.common
 import org.junit.Assert
 import org.junit.Test
 
-class DummyNode(val data: String, val childrenList: List<DummyNode>) : Node() {
+class DummyNode(val data: String, val childrenList: List<DummyNode>) : Node {
+    override fun isLeaf(): Boolean {
+        return childrenList.isEmpty()
+    }
+
     override fun getTypeLabel(): String {
         return data
     }

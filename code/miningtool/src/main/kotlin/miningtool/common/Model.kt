@@ -2,17 +2,16 @@ package miningtool.common
 
 import java.io.InputStream
 
-abstract class Node {
-    abstract fun getTypeLabel(): String
-    abstract fun getChildren(): List<Node>
-    abstract fun getParent(): Node?
-    abstract fun getToken(): String
-    override fun toString(): String {
-        return "${getTypeLabel()} ${getToken()}"
-    }
-
-    fun isLeaf(): Boolean = getChildren().isEmpty()
+interface Node {
+    fun getTypeLabel(): String
+    fun getChildren(): List<Node>
+    fun getParent(): Node?
+    fun getToken(): String
+    fun isLeaf(): Boolean
 }
+
+
+//class SimpleNode(val typeLabel: String, val parent: Node?, val token: String): AbstractNode() {}
 
 interface TreeSplitter<T: Node> {
     fun split(root: T): Collection<T>
