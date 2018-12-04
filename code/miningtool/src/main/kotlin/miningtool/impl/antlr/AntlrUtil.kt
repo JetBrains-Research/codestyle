@@ -34,7 +34,7 @@ class SimpleNode(private val myTypeLabel: String, private val myParent: Node?, p
 }
 
 fun convertAntlrTree(tree: ParserRuleContext, ruleNames: Array<String>): SimpleNode {
-    return convertRuleContext(tree, ruleNames, null)
+    return simplifyTree(convertRuleContext(tree, ruleNames, null))
 }
 
 private fun convertRuleContext(ruleContext: ParserRuleContext, ruleNames: Array<String>, parent: Node?): SimpleNode {
@@ -64,5 +64,14 @@ private fun convertTerminal(terminalNode: TerminalNode, parent: Node?): SimpleNo
 
 private fun convertErrorNode(errorNode: ErrorNode, parent: Node?): SimpleNode {
     return SimpleNode("Error", parent, errorNode.text)
+}
+
+private fun simplifyTree(tree: SimpleNode): SimpleNode {
+    return if (tree.getChildren().size == 1) {
+        simplifyTree(tree.getChildren().first() as SimpleNode)
+    } else {
+        tree.setChildren(tree.getChildren().map { simplifyTree(it as SimpleNode) })
+        tree
+    }
 }
 
