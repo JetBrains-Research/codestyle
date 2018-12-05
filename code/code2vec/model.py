@@ -99,10 +99,10 @@ class Model:
                 self.pack_dataset.init_epoch()
                 print('------------------------------------')
                 print('Results of evaluation on test data:')
-                self.evaluate_and_print_results(epoch, self.pack_dataset.test_generator)
+                self.evaluate_and_print_results(epoch, self.pack_dataset.test_generator, self.TEST_EXAMPLES)
                 print('------------------------------------')
                 print('Results of evaluation on train data:')
-                self.evaluate_and_print_results(epoch, self.pack_dataset.train_generator)
+                self.evaluate_and_print_results(epoch, self.pack_dataset.train_generator, self.TRAIN_EXAMPLES)
                 print('------------------------------------')
 
         if self.config.SAVE_PATH:
@@ -119,8 +119,8 @@ class Model:
                                                                               self.config.BATCH_SIZE * self.num_batches_to_log / (
                                                                                   multi_batch_elapsed if multi_batch_elapsed > 0 else 1)))
 
-    def evaluate_and_print_results(self, epoch_num, generator):
-        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate(generator)
+    def evaluate_and_print_results(self, epoch_num, generator, total_examples):
+        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate(generator, total_examples)
         print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
         print('Per class statistics after ' + str(epoch_num) + ' epochs:')
         for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
@@ -136,7 +136,7 @@ class Model:
         print('Rank matrix:')
         print(rank_matrix)
 
-    def evaluate(self, generator):
+    def evaluate(self, generator, total_examples):
         eval_start_time = time.time()
         with open('log.txt', 'w') as output_file:
             num_correct_predictions = np.zeros(self.topk)
@@ -179,7 +179,7 @@ class Model:
                 if total_prediction_batches % self.num_batches_to_log == 0:
                     elapsed = time.time() - start_time
                     # start_time = time.time()
-                    self.trace_evaluation(total_predictions, elapsed, self.TEST_EXAMPLES)
+                    self.trace_evaluation(total_predictions, elapsed, total_examples)
 
             print('Done testing, epoch reached')
             output_file.write(str(num_correct_predictions / total_predictions) + '\n')
