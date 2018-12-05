@@ -81,7 +81,6 @@ def create_dataset(changes_path, meta_file, entities_dict_path, compressed_chang
             cnt += 1
             entity = saved_entity(row['authorName'], row['authorEmail'])
             bucket = get_bucket(entity2k[entity])
-            cnt += 1
             fout[bucket].write('{},{},{},{},{},{},{},{},{}\n'.format(cnt,
                                                                      row['changeId'],
                                                                      entity,
