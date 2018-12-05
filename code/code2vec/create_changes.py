@@ -48,14 +48,12 @@ def create_dataset(changes_path, meta_file, entities_dict_path, compressed_chang
             continue
         change2entity[index] = (entity, row['authorTime'])
 
-    cnt = 0
     entity2methods = {entity: 0 for entity in entities}
 
     for file_id in range(data_count):
         print("Processing file changes {}/{}".format(file_id + 1, data_count))
         df = pd.read_csv(data_file.format(file_id))
         for index, row in df.iterrows():
-            cnt += 1
             entity, author_time = change2entity[row['changeId']]
             entity2methods[entity] += 1
         del df
@@ -75,10 +73,12 @@ def create_dataset(changes_path, meta_file, entities_dict_path, compressed_chang
     for bucket in buckets:
         fout[bucket].write('id,changeId,entity,methodBeforeId,methodAfterId,pathsCountBefore,pathsCountAfter,pathsBefore,pathsAfter\n')
 
+    cnt = 0
     for file_id in range(data_count):
         print("Processing #{}".format(file_id + 1))
         df = pd.read_csv(data_file.format(file_id))
         for index, row in df.iterrows():
+            cnt += 1
             entity = saved_entity(row['authorName'], row['authorEmail'])
             bucket = get_bucket(entity2k[entity])
             cnt += 1
