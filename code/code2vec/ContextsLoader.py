@@ -33,7 +33,7 @@ class ContextsLoader:
                 #         self.config.PATH_MAX < cnt_before or self.config.PATH_MAX < cnt_after:
                 #     continue
                 ids[cnt] = index
-                set_restricted = set(row['pathsBefore'].split(';')) &  set(row['pathsAfter'].split(';')) \
+                set_restricted = set(row['pathsBefore'].split(';')) & set(row['pathsAfter'].split(';')) \
                     if type(row['pathsBefore']) is str \
                        and type(row['pathsAfter']) is str \
                     else set()
