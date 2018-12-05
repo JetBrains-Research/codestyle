@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+from collections import Counter
 
 
 class PackDataset:
@@ -8,7 +9,9 @@ class PackDataset:
         self.config = config
         self.mapping = {}
         self.entities_cnt = 0
+        print('Loading train...')
         self.train_entities, self.train_packs = self.read_files(train_files, shuffle=True)
+        print('Loading test...')
         self.test_entities, self.test_packs = self.read_files(test_files)
         self.entities_placeholder, self.packs_before_placeholder, self.packs_after_placeholder = \
             self.create_placeholders()
@@ -18,6 +21,7 @@ class PackDataset:
         self.test_examples = len(self.test_entities)
 
     def read_files(self, files, shuffle=False):
+        counter = Counter()
         entities = []
         packs = []
         for i, filename in enumerate(files):
@@ -30,6 +34,7 @@ class PackDataset:
                         self.mapping[entity] = self.entities_cnt
                     entities.append(self.mapping[entity])
                     packs.append(items[1:])
+                    counter[self.mapping[entity]] += 1
 
         entities = np.array(entities, dtype=np.int32)
         packs = np.array(packs, dtype=np.int32)
@@ -37,6 +42,7 @@ class PackDataset:
             perm = np.random.permutation(len(entities))
             entities = entities[perm]
             packs = packs[perm]
+        print(counter)
         return entities, packs
 
     def create_placeholders(self):
