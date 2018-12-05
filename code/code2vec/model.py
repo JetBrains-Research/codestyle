@@ -96,9 +96,13 @@ class Model:
                 save_target = self.config.SAVE_PATH + '_iter' + str(epoch)
                 self.save_model(self.sess, save_target)
                 print('Saved after %d epochs in: %s' % (epoch, save_target))
+                self.pack_dataset.init_epoch()
                 print('------------------------------------')
                 print('Results of evaluation on test data:')
-                self.evaluate_and_print_results(epoch)
+                self.evaluate_and_print_results(epoch, self.pack_dataset.test_generator)
+                print('------------------------------------')
+                print('Results of evaluation on train data:')
+                self.evaluate_and_print_results(epoch, self.pack_dataset.train_generator)
                 print('------------------------------------')
 
         if self.config.SAVE_PATH:
@@ -115,8 +119,8 @@ class Model:
                                                                               self.config.BATCH_SIZE * self.num_batches_to_log / (
                                                                                   multi_batch_elapsed if multi_batch_elapsed > 0 else 1)))
 
-    def evaluate_and_print_results(self, epoch_num):
-        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate()
+    def evaluate_and_print_results(self, epoch_num, generator):
+        results, precision, recall, f1, confuse_matrix, rank_matrix = self.evaluate(generator)
         print('Accuracy after %d epochs: %s' % (epoch_num, results[:5]))
         print('Per class statistics after ' + str(epoch_num) + ' epochs:')
         for i, (p, r, f) in enumerate(zip(precision, recall, f1)):
@@ -132,7 +136,7 @@ class Model:
         print('Rank matrix:')
         print(rank_matrix)
 
-    def evaluate(self):
+    def evaluate(self, generator):
         eval_start_time = time.time()
         with open('log.txt', 'w') as output_file:
             num_correct_predictions = np.zeros(self.topk)
@@ -151,7 +155,7 @@ class Model:
 
             start_time = time.time()
 
-            for batched_packs, batched_entities in self.pack_dataset.test_generator:
+            for batched_packs, batched_entities in generator:
                 packs_before, packs_after = self.contexts_loader.get(batched_packs)
                 top_indices, top_scores, original_entities = self.sess.run(
                     [self.predict_top_indices_op, self.predict_top_scores_op, self.predict_original_entities_op],
