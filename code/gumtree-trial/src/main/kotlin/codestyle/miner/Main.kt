@@ -72,6 +72,8 @@ fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage, methodM
     val threads: MutableCollection<Thread> = HashSet()
     val infos: MutableList<FileChangeInfo> = ArrayList()
 
+    initMethodContentsDir(methodMatcher.repoName)
+
     entries.chunked(chunkSize).forEachIndexed { threadNumber, chunk ->
         val currentThread = thread {
             var processed = 0
@@ -144,19 +146,28 @@ fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage, methodMatch
         return retrievePaths(context, node, pathStorage, 10, 3)
     }
 
+
     val methodChangeInfos: MutableList<MethodChangeInfo> = ArrayList()
 
+    var currentMethodIndex = 0
+
     changedMappings.forEach {
+        currentMethodIndex++
         val treeBefore = it.before?.node
         val treeAfter = it.after?.node
 
-        val pathsBefore = getMethodPaths(treeBefore, mappingContext.treeContextBefore)
-        val pathsAfter = getMethodPaths(treeAfter, mappingContext.treeContextAfter)
-        val methodChangeData = MethodChangeInfo(it.before?.id, it.after?.id,
-                pathsBefore.size,
-                pathsAfter.size,
-                pathsBefore.map { path -> path.toShortString() }.joinToString(separator = ";"),
-                pathsAfter.map { path -> path.toShortString() }.joinToString(separator = ";"))
+        val methodContentBefore = getMethodContent(treeBefore, entry.oldContentId, methodMatcher.repoName)
+//        println(methodContentBefore)
+        val methodContentAfter = getMethodContent(treeAfter, entry.newContentId, methodMatcher.repoName)
+//        println(methodContentAfter)
+        val methodContentIdBefore = if (methodContentBefore == null) null else "${entry.id}.$currentMethodIndex.before"
+        val methodContentIdAfter = if (methodContentAfter == null) null else "${entry.id}.$currentMethodIndex.after"
+
+        saveMethodContent(methodContentIdBefore, methodContentBefore, methodMatcher.repoName)
+        saveMethodContent(methodContentIdAfter, methodContentAfter, methodMatcher.repoName)
+
+        val methodChangeData = MethodChangeInfo(it.before?.id, it.after?.id, methodContentBefore, methodContentAfter)
+
         methodChangeInfos.add(methodChangeData)
     }
 

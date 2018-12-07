@@ -28,8 +28,7 @@ fun ChangeEntry.toCsvLine(): String {
 const val CHANGE_ENTRY_CSV_HEADER = "id,commitId,authorName,authorEmail,committerName,committerEmail,authorTime,committerTime,changeType,oldContentId,newContentId,oldPath,newPath"
 
 data class MethodChangeInfo(val methodIdBefore: MethodId?, val methodIdAfter: MethodId?,
-                            val pathsCountBefore: Int, val pathsCountAfter: Int,
-                            val pathsBefore: String, val pathsAfter: String)
+                            val methodContentBeforeId: String?, val methodContentAfterId: String?)
 
 data class FileChangeInfo(val changeEntryId: Int, val authorName: String, val authorEmail: String, val methodChanges: List<MethodChangeInfo>)
 
@@ -49,7 +48,7 @@ class MethodMapping(val before: MethodInfo?, val after: MethodInfo?) {
     val isChanged = isChanged(before, after)
 }
 
-class DataDumper(val repoName: String) {
+class DataDumper(repoName: String) {
     val dirName = "out/$repoName"
 
     fun dumpData(entries: List<ChangeEntry>, changes: List<FileChangeInfo>, pathStorage: PathStorage) {
@@ -122,7 +121,7 @@ class DataDumper(val repoName: String) {
     }
 
     fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, methodIdStorage: IncrementalIdStorage<MethodId>) {
-        val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,pathsCountBefore,pathsCountAfter,pathsBefore,pathsAfter"
+        val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,contentBeforeId,contentAfterId"
 
         val dir = File(dirName)
         dir.mkdirs()
@@ -132,7 +131,7 @@ class DataDumper(val repoName: String) {
                 fileChange.methodChanges.forEach {
                     val idBefore = if (it.methodIdBefore == null) 0 else methodIdStorage.record(it.methodIdBefore)
                     val idAfter = if (it.methodIdAfter == null) 0 else methodIdStorage.record(it.methodIdAfter)
-                    val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.pathsCountBefore},${it.pathsCountAfter},${it.pathsBefore},${it.pathsAfter}"
+                    val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.methodContentBeforeId},${it.methodContentAfterId}"
                     out.println(line)
                 }
             }
