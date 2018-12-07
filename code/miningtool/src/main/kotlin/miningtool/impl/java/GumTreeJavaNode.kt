@@ -5,6 +5,16 @@ import com.github.gumtreediff.tree.TreeContext
 import miningtool.common.Node
 
 class GumTreeJavaNode(val wrappedNode: ITree, val context: TreeContext, val parent: GumTreeJavaNode?) : Node {
+    val myMetadata: MutableMap<String, Any> = HashMap()
+
+    override fun getMetadata(key: String): Any? {
+        return myMetadata[key]
+    }
+
+    override fun setMetadata(key: String, value: Any) {
+        myMetadata[key] = value
+    }
+
     override fun isLeaf(): Boolean {
         return childrenList.isEmpty()
     }

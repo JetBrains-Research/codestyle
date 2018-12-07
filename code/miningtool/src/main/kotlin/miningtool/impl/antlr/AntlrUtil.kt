@@ -5,34 +5,6 @@ import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ErrorNode
 import org.antlr.v4.runtime.tree.TerminalNode
 
-class SimpleNode(private val myTypeLabel: String, private val myParent: Node?, private val myToken: String?): Node {
-    private var myChildren: List<Node> = emptyList()
-
-    fun setChildren(newChildren: List<Node>) {
-        myChildren = newChildren
-    }
-
-    override fun getTypeLabel(): String {
-        return myTypeLabel
-    }
-
-    override fun getChildren(): List<Node> {
-        return myChildren
-    }
-
-    override fun getParent(): Node? {
-        return myParent
-    }
-
-    override fun getToken(): String {
-        return myToken?: "null"
-    }
-
-    override fun isLeaf(): Boolean {
-        return myChildren.isEmpty()
-    }
-}
-
 fun convertAntlrTree(tree: ParserRuleContext, ruleNames: Array<String>): SimpleNode {
     return simplifyTree(convertRuleContext(tree, ruleNames, null))
 }

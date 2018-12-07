@@ -4,6 +4,14 @@ import org.junit.Assert
 import org.junit.Test
 
 class DummyNode(val data: String, val childrenList: List<DummyNode>) : Node {
+    override fun setMetadata(key: String, value: Any) {
+
+    }
+
+    override fun getMetadata(key: String): Any? {
+        return null
+    }
+
     override fun isLeaf(): Boolean {
         return childrenList.isEmpty()
     }
