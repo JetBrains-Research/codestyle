@@ -3,6 +3,7 @@ package miningtool.impl.java
 import com.github.gumtreediff.tree.ITree
 import com.github.gumtreediff.tree.TreeContext
 import miningtool.common.Node
+import miningtool.common.TreeSplitter
 
 class GumTreeJavaNode(val wrappedNode: ITree, val context: TreeContext, val parent: GumTreeJavaNode?) : Node {
     val myMetadata: MutableMap<String, Any> = HashMap()
@@ -37,5 +38,12 @@ class GumTreeJavaNode(val wrappedNode: ITree, val context: TreeContext, val pare
 
     override fun getToken(): String {
         return wrappedNode.label
+    }
+}
+
+//Returns all method definition nodes in the higher-level node
+class MethodSplitter(): TreeSplitter<GumTreeJavaNode> {
+    override fun split(root: GumTreeJavaNode): Collection<GumTreeJavaNode> {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 }
