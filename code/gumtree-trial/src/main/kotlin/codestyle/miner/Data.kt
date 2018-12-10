@@ -27,8 +27,11 @@ fun ChangeEntry.toCsvLine(): String {
 
 const val CHANGE_ENTRY_CSV_HEADER = "id,commitId,authorName,authorEmail,committerName,committerEmail,authorTime,committerTime,changeType,oldContentId,newContentId,oldPath,newPath"
 
+data class MethodContentLocation(val blobId: String?, val startOffset: Int?, val endOffset: Int?)
+
 data class MethodChangeInfo(val methodIdBefore: MethodId?, val methodIdAfter: MethodId?,
-                            val methodContentBeforeId: String?, val methodContentAfterId: String?)
+                            val contentLocationBefore: MethodContentLocation,
+                            val contentLocationAfter: MethodContentLocation)
 
 data class FileChangeInfo(val changeEntryId: Int, val authorName: String, val authorEmail: String, val methodChanges: List<MethodChangeInfo>)
 
@@ -121,7 +124,7 @@ class DataDumper(repoName: String) {
     }
 
     fun saveFileChangesChunk(filename: String, fileChanges: List<FileChangeInfo>, methodIdStorage: IncrementalIdStorage<MethodId>) {
-        val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,contentBeforeId,contentAfterId"
+        val header = "changeId,authorName,authorEmail,methodBeforeId,methodAfterId,blobIdBefore,startOffsetBefore,endOffsetBefore,blobIdAfter,startOffsetAfter,endOffsetAfter"
 
         val dir = File(dirName)
         dir.mkdirs()
@@ -131,7 +134,9 @@ class DataDumper(repoName: String) {
                 fileChange.methodChanges.forEach {
                     val idBefore = if (it.methodIdBefore == null) 0 else methodIdStorage.record(it.methodIdBefore)
                     val idAfter = if (it.methodIdAfter == null) 0 else methodIdStorage.record(it.methodIdAfter)
-                    val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter,${it.methodContentBeforeId},${it.methodContentAfterId}"
+                    val line = "${fileChange.changeEntryId},${fileChange.authorName},${fileChange.authorEmail},$idBefore,$idAfter," +
+                            "${it.contentLocationBefore.blobId},${it.contentLocationBefore.startOffset},${it.contentLocationBefore.endOffset},"+
+                            "${it.contentLocationAfter.blobId},${it.contentLocationAfter.startOffset},${it.contentLocationAfter.endOffset}"
                     out.println(line)
                 }
             }

@@ -72,8 +72,6 @@ fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage, methodM
     val threads: MutableCollection<Thread> = HashSet()
     val infos: MutableList<FileChangeInfo> = ArrayList()
 
-    initMethodContentsDir(methodMatcher.repoName)
-
     entries.chunked(chunkSize).forEachIndexed { threadNumber, chunk ->
         val currentThread = thread {
             var processed = 0
@@ -134,6 +132,10 @@ fun MethodMatcher.getMappingContext(entry: ChangeEntry): MappingContext {
 
 fun PathContext.toShortString(): String = "${this.startToken} ${this.pathId} ${this.endToken}"
 
+fun getMethodContentLocation(methodNode: ITree?, contentId: BlobId?): MethodContentLocation {
+    return MethodContentLocation(contentId?.id, methodNode?.pos, methodNode?.endPos)
+}
+
 fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage, methodMatcher: MethodMatcher): FileChangeInfo {
     // retrieve the method mappings between the two versions of the file
     val mappingContext = methodMatcher.getMappingContext(entry)
@@ -149,24 +151,15 @@ fun processChangeEntry(entry: ChangeEntry, pathStorage: PathStorage, methodMatch
 
     val methodChangeInfos: MutableList<MethodChangeInfo> = ArrayList()
 
-    var currentMethodIndex = 0
 
     changedMappings.forEach {
-        currentMethodIndex++
         val treeBefore = it.before?.node
         val treeAfter = it.after?.node
 
-        val methodContentBefore = getMethodContent(treeBefore, entry.oldContentId, methodMatcher.repoName)
-//        println(methodContentBefore)
-        val methodContentAfter = getMethodContent(treeAfter, entry.newContentId, methodMatcher.repoName)
-//        println(methodContentAfter)
-        val methodContentIdBefore = if (methodContentBefore == null) null else "${entry.id}.$currentMethodIndex.before"
-        val methodContentIdAfter = if (methodContentAfter == null) null else "${entry.id}.$currentMethodIndex.after"
+        val contentLocationBefore = getMethodContentLocation(it.before?.node, entry.oldContentId)
+        val contentLocationAfter = getMethodContentLocation(it.after?.node, entry.newContentId)
 
-        saveMethodContent(methodContentIdBefore, methodContentBefore, methodMatcher.repoName)
-        saveMethodContent(methodContentIdAfter, methodContentAfter, methodMatcher.repoName)
-
-        val methodChangeData = MethodChangeInfo(it.before?.id, it.after?.id, methodContentBefore, methodContentAfter)
+        val methodChangeData = MethodChangeInfo(it.before?.id, it.after?.id, contentLocationBefore, contentLocationAfter)
 
         methodChangeInfos.add(methodChangeData)
     }
