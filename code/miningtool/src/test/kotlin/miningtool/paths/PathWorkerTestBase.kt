@@ -10,7 +10,7 @@ abstract class PathWorkerTestBase {
 
     @Test
     fun anyPathsReturned() {
-        val allPaths = PathWorker().retrievePaths(getTree(), PathRetrievalSettings.NO_LIMIT)
+        val allPaths = PathWorker().retrievePaths(getTree())
         Assert.assertFalse("At least some paths should be retrieved from a non-trivial tree", allPaths.isEmpty())
     }
 
@@ -19,7 +19,7 @@ abstract class PathWorkerTestBase {
         val tree = getTree()
         val nLeaves = tree.postOrder().count { it.isLeaf() }
 
-        val allPaths = PathWorker().retrievePaths(tree, PathRetrievalSettings.NO_LIMIT)
+        val allPaths = PathWorker().retrievePaths(tree)
         val expectedCount = (nLeaves * (nLeaves - 1)) / 2
 
         Assert.assertEquals("A tree with $nLeaves leaves contains $expectedCount paths, " +
@@ -32,7 +32,7 @@ abstract class PathWorkerTestBase {
         val tree = getTree()
         val nLeaves = tree.postOrder().count { it.isLeaf() }
 
-        val allPaths = PathWorker().retrievePaths(tree, PathRetrievalSettings(Int.MAX_VALUE, 1))
+        val allPaths = PathWorker().retrievePaths(tree, Int.MAX_VALUE, 1)
         val expectedCount = nLeaves - 1
 
         Assert.assertEquals("A tree with $nLeaves leaves contains $expectedCount paths of width 1. " +
@@ -46,7 +46,7 @@ abstract class PathWorkerTestBase {
         val nLeaves = tree.postOrder().count { it.isLeaf() }
 
         for (maxWidth in 1..nLeaves) {
-            val paths = PathWorker().retrievePaths(tree, PathRetrievalSettings(Int.MAX_VALUE, maxWidth))
+            val paths = PathWorker().retrievePaths(tree, Int.MAX_VALUE, maxWidth)
             val expectedPathsCount = getPathsCountWithNoHeightLimit(nLeaves, maxWidth)
             Assert.assertEquals("A tree with $nLeaves nodes should contain $expectedPathsCount paths " +
                     "of width up to $maxWidth, worker returned ${paths.size}",
@@ -58,7 +58,7 @@ abstract class PathWorkerTestBase {
     fun pathValidity() {
         val tree = getTree()
 
-        val allPaths = PathWorker().retrievePaths(tree, PathRetrievalSettings.NO_LIMIT)
+        val allPaths = PathWorker().retrievePaths(tree)
         allPaths.forEach {
             assertPathIsValid(it)
         }
@@ -86,7 +86,7 @@ abstract class PathWorkerTestBase {
             for (maxWidth in 1..leavesCount) {
                 Assert.assertEquals(
                         countPossiblePaths(tree, maxHeight, maxWidth),
-                        PathWorker().retrievePaths(tree, PathRetrievalSettings(maxHeight, maxWidth)))
+                        PathWorker().retrievePaths(tree, maxHeight, maxWidth))
             }
         }
     }
@@ -100,7 +100,7 @@ abstract class PathWorkerTestBase {
 
         for (maxHeight in 1..maxHeightLimit) {
             for (maxWidth in 1..leavesCount) {
-                val paths = PathWorker().retrievePaths(tree, PathRetrievalSettings(maxHeight, maxWidth))
+                val paths = PathWorker().retrievePaths(tree, maxHeight, maxWidth)
                 paths.forEach { assertPathIsValid(it) }
             }
         }

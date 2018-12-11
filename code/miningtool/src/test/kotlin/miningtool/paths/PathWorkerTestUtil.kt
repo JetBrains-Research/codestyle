@@ -34,7 +34,7 @@ fun countPossiblePaths(rootNode: Node, maxHeight: Int, maxWidth: Int): Int {
     }
 
     fun Node.countPathsInSubtreeStartingFrom(startNode: Node, maxWidth: Int): Int {
-        val branchIndices : MutableMap<Node, Int>  = HashMap()
+        val branchIndices: MutableMap<Node, Int> = HashMap()
         this.getChildren().forEachIndexed { index, node ->
             val childSubTreeLeaves = node.postOrder().filter { it.isLeaf() }
             childSubTreeLeaves.forEach { branchIndices[it] = index }
