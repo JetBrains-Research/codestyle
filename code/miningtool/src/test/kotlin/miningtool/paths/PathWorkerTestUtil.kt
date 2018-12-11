@@ -65,8 +65,8 @@ fun countPossiblePaths(rootNode: Node, maxHeight: Int, maxWidth: Int): Int {
 }
 
 fun ASTPath.allNodesAreDistinct(): Boolean {
-    return this.upwardNodes.size == HashSet(this.upwardNodes).size
-            && this.downwardNodes.size == HashSet(this.downwardNodes).size
+    return this.upwardNodes.size == this.upwardNodes.toSet().size
+            && this.downwardNodes.size == this.downwardNodes.toSet().size
 }
 
 fun ASTPath.isSimple(): Boolean {
@@ -76,7 +76,9 @@ fun ASTPath.isSimple(): Boolean {
 fun ASTPath.piecesMatch(): Boolean = this.upwardNodes.last() === this.downwardNodes.first()
 
 fun assertPathIsValid(path: ASTPath) {
-    Assert.assertTrue(path.allNodesAreDistinct())
-    Assert.assertTrue(path.piecesMatch())
-    Assert.assertTrue(path.isSimple())
+    Assert.assertTrue("Nodes in each of the path pieces should be distinct", path.allNodesAreDistinct())
+    Assert.assertTrue("The pieces of the path should match on the top node", path.piecesMatch())
+    Assert.assertTrue("Path should be simple: upward and downward pieces " +
+            "should only have the top node in common",
+            path.isSimple())
 }
