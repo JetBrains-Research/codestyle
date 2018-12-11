@@ -33,7 +33,7 @@ fun countPossiblePaths(rootNode: Node, maxHeight: Int, maxWidth: Int): Int {
         return parents
     }
 
-    fun Node.countPathsInSubtreeStartingFrom(startNode: Node, maxWidth: Int): Int {
+    fun Node.countPathsInSubtreeStartingFrom(startNode: Node, maxWidth: Int, topNode: Node): Int {
         val branchIndices: MutableMap<Node, Int> = HashMap()
         this.getChildren().forEachIndexed { index, node ->
             val childSubTreeLeaves = node.postOrder().filter { it.isLeaf() }
@@ -43,8 +43,20 @@ fun countPossiblePaths(rootNode: Node, maxHeight: Int, maxWidth: Int): Int {
         val startNodeOrder = leaveOrders[startNode]!!
         val startNodeBranchIndex = branchIndices[startNode]!!
 
+        fun getDepth(node: Node, relativeTo: Node): Int {
+            var currentNode: Node? = node
+            var depth = 0
+            while (currentNode != null) {
+                if (currentNode === relativeTo) return depth
+                currentNode = currentNode!!.getParent()
+                depth++
+            }
+            return -1
+        }
+
         val possibleEndNodes = this.postOrder().filter {
             it.isLeaf()
+                    && getDepth(it, topNode) in (1..maxHeight)
                     && (branchIndices[it]!! > startNodeBranchIndex)
                     && (leaveOrders[it]!! > startNodeOrder)
                     && (leaveOrders[it]!! - startNodeOrder) <= maxWidth
@@ -57,7 +69,7 @@ fun countPossiblePaths(rootNode: Node, maxHeight: Int, maxWidth: Int): Int {
     allLeaves.forEach { leaf ->
         val possibleTopNodes = leaf.retrieveParentsUpToMaxHeight(maxHeight)
         possibleTopNodes.forEach { topNode ->
-            totalPaths += topNode.countPathsInSubtreeStartingFrom(leaf, maxWidth)
+            totalPaths += topNode.countPathsInSubtreeStartingFrom(leaf, maxWidth, topNode)
         }
     }
 
