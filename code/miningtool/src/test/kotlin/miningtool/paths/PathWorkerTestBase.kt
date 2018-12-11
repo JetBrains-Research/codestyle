@@ -84,9 +84,11 @@ abstract class PathWorkerTestBase {
 
         for (maxHeight in 1..maxHeightLimit) {
             for (maxWidth in 1..leavesCount) {
+                val paths = PathWorker().retrievePaths(tree, maxHeight, maxWidth)
                 Assert.assertEquals(
+                        "Unexpected paths count with height $maxHeight and width $maxWidth",
                         countPossiblePaths(tree, maxHeight, maxWidth),
-                        PathWorker().retrievePaths(tree, maxHeight, maxWidth))
+                        paths.size)
             }
         }
     }
