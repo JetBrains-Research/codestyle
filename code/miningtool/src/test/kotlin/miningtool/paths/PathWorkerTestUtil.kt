@@ -69,9 +69,14 @@ fun ASTPath.allNodesAreDistinct(): Boolean {
             && this.downwardNodes.size == HashSet(this.downwardNodes).size
 }
 
+fun ASTPath.isSimple(): Boolean {
+    return this.upwardNodes.toSet().intersect(this.downwardNodes.toSet()).size == 1
+}
+
 fun ASTPath.piecesMatch(): Boolean = this.upwardNodes.last() === this.downwardNodes.first()
 
 fun assertPathIsValid(path: ASTPath) {
     Assert.assertTrue(path.allNodesAreDistinct())
     Assert.assertTrue(path.piecesMatch())
+    Assert.assertTrue(path.isSimple())
 }
