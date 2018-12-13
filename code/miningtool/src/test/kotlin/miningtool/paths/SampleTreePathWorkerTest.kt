@@ -1,7 +1,6 @@
 package miningtool.paths
 
 import miningtool.common.Node
-import miningtool.impl.antlr.SimpleNode
 
 class SampleTreePathWorkerTest : PathWorkerTestBase() {
     override fun getTree(): Node {

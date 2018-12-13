@@ -1,4 +1,4 @@
-package miningtool.impl.java
+package miningtool.parse.java
 
 import com.github.gumtreediff.client.Run
 import com.github.gumtreediff.gen.jdt.JdtTreeGenerator
@@ -7,7 +7,6 @@ import miningtool.common.Node
 import miningtool.common.Parser
 import java.io.InputStream
 import java.io.InputStreamReader
-import java.io.Reader
 
 class GumTreeJavaParser : Parser() {
     init {

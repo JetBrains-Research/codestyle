@@ -1,10 +1,10 @@
-package miningtool.impl.antlr.c
+package miningtool.parse.antlr.c
 
 import me.vovak.antlr.parser.CLexer
 import me.vovak.antlr.parser.CParser
 import miningtool.common.Node
 import miningtool.common.Parser
-import miningtool.impl.antlr.convertAntlrTree
+import miningtool.parse.antlr.convertAntlrTree
 import org.antlr.v4.runtime.ANTLRInputStream
 import org.antlr.v4.runtime.CommonTokenStream
 import java.io.InputStream

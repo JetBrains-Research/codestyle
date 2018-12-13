@@ -1,4 +1,4 @@
-package miningtool.impl.java
+package miningtool.parse.java
 
 import org.junit.Assert
 import org.junit.Test

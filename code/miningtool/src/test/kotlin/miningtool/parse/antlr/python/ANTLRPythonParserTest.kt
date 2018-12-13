@@ -1,4 +1,4 @@
-package miningtool.impl.antlr.python
+package miningtool.parse.antlr.python
 
 import org.junit.Assert
 import org.junit.Test

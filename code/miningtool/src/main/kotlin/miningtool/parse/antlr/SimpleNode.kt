@@ -1,4 +1,4 @@
-package miningtool.impl.antlr
+package miningtool.parse.antlr
 
 import miningtool.common.Node
 

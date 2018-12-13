@@ -18,7 +18,10 @@ fun ITree.setPathPieces(pathPieces: Collection<List<ITree>>) {
     this.setMetadata(PATH_PIECES_KEY, pathPieces)
 }
 
-fun ITree.getPathPieces(): Collection<MutableList<ITree>> = this.getMetadata(PATH_PIECES_KEY) as Collection<MutableList<ITree>>
+@Suppress("UNCHECKED_CAST")
+fun ITree.getPathPieces(): Collection<MutableList<ITree>> {
+    return this.getMetadata(PATH_PIECES_KEY) as Collection<MutableList<ITree>>
+}
 
 fun ITree.setLeafIndex(value: Int) = setIntValue(LEAF_INDEX_KEY, value)
 

@@ -1,4 +1,4 @@
-package miningtool.impl.java
+package miningtool.parse.java
 
 import com.github.gumtreediff.tree.ITree
 import com.github.gumtreediff.tree.TreeContext

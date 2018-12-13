@@ -3,7 +3,7 @@ package miningtool.paths
 import miningtool.common.ASTPath
 import miningtool.common.Node
 import miningtool.common.postOrder
-import miningtool.impl.antlr.SimpleNode
+import miningtool.parse.antlr.SimpleNode
 import org.junit.Assert
 
 fun simpleNode(number: Int, parent: Node?): SimpleNode {
