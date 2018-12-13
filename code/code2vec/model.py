@@ -361,22 +361,22 @@ class Model:
         keep_prob1 = 0.75
 
         # (batch, pack, max_contexts * 2, 1)
-        starts = tf.concat([self.get_slice(before_contexts, 0), self.get_slice(after_contexts, 0)], axis=2)
+        # starts = tf.concat([self.get_slice(before_contexts, 0), self.get_slice(after_contexts, 0)], axis=2)
         paths = tf.concat([self.get_slice(before_contexts, 1), self.get_slice(after_contexts, 1)], axis=2)
-        ends = tf.concat([self.get_slice(before_contexts, 2), self.get_slice(after_contexts, 2)], axis=2)
-        starts = tf.squeeze(starts, axis=-1)
+        # ends = tf.concat([self.get_slice(before_contexts, 2), self.get_slice(after_contexts, 2)], axis=2)
+        # starts = tf.squeeze(starts, axis=-1)
         paths = tf.squeeze(paths, axis=-1)
-        ends = tf.squeeze(ends, axis=-1)
+        # ends = tf.squeeze(ends, axis=-1)
         # (batch, pack, max_contexts * 2)
         # valid_mask = tf.concat([removed['mask'], added['mask']], axis=2)
 
         # (batch, pack, max_contexts * 2, dim)
-        start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=starts)
+        # start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=starts)
         path_embed = tf.nn.embedding_lookup(params=paths_vocab, ids=paths)
-        end_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=ends)
+        # end_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=ends)
 
         # (batch, pack, max_contexts * 2, dim * 3)
-        context_embed = tf.concat([start_token_embed, path_embed, end_token_embed], axis=-1)
+        context_embed = path_embed # tf.concat([start_token_embed, path_embed, end_token_embed], axis=-1)
 
         if trainable:
             context_embed = tf.nn.dropout(context_embed, keep_prob1)
