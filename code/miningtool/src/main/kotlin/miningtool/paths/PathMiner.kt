@@ -19,7 +19,6 @@ class PathMiner(val parserProvider: () -> Parser, val settings: PathRetrievalSet
     }
 
     private fun doRetrievePaths(tree: Node): Collection<ASTPath> {
-        //todo adapt from the custom miner code
         return pathWorker.retrievePaths(tree, settings.maxHeight, settings.maxWidth)
     }
 }
