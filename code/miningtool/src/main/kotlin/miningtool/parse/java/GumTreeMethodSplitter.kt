@@ -6,7 +6,7 @@ import miningtool.common.TreeSplitter
 import miningtool.common.preOrder
 
 
-data class MethodInfo(val name: String, val parameterTypes: List<String>)
+data class MethodInfo(val enclosingClassName: String, val methodName: String, val parameterTypes: List<String>)
 
 val METHOD_INFO_KEY = "method_info"
 
@@ -18,7 +18,8 @@ fun GumTreeJavaNode.getMethodInfo(): MethodInfo? {
     return this.getMetadata(METHOD_INFO_KEY) as? MethodInfo
 }
 
-class GumTreeMethodSplitter(): TreeSplitter<GumTreeJavaNode>{
+
+class GumTreeMethodSplitter() : TreeSplitter<GumTreeJavaNode> {
     private fun getMethodNodes(treeContext: TreeContext): List<ITree> {
         return treeContext.root.descendants
                 .filter { treeContext.getTypeLabel(it.type) == "MethodDeclaration" }
@@ -26,6 +27,13 @@ class GumTreeMethodSplitter(): TreeSplitter<GumTreeJavaNode>{
 
     private fun getMethodName(methodNode: ITree, context: TreeContext): String {
         val nameNode = methodNode.children.firstOrNull { context.getTypeLabel(it.type) == "SimpleName" }
+        return nameNode?.label ?: ""
+    }
+
+    private fun getEnclosingClassName(methodNode: ITree, context: TreeContext): String {
+        val classDeclarationNode = methodNode.parents.firstOrNull { context.getTypeLabel(it.type) == "TypeDeclaration" }
+                ?: return ""
+        val nameNode = classDeclarationNode.children.firstOrNull { context.getTypeLabel(it.type) == "SimpleName" }
         return nameNode?.label ?: ""
     }
 
@@ -41,7 +49,9 @@ class GumTreeMethodSplitter(): TreeSplitter<GumTreeJavaNode>{
     }
 
     private fun getMethodInfo(methodNode: ITree, context: TreeContext): MethodInfo {
-        return MethodInfo(getMethodName(methodNode, context), getParameterTypes(methodNode, context))
+        return MethodInfo(getEnclosingClassName(methodNode, context),
+                getMethodName(methodNode, context),
+                getParameterTypes(methodNode, context))
     }
 
     override fun split(root: GumTreeJavaNode): Collection<GumTreeJavaNode> {
@@ -51,7 +61,7 @@ class GumTreeMethodSplitter(): TreeSplitter<GumTreeJavaNode>{
 
         root.preOrder().forEach {
             val gtNode = (it as GumTreeJavaNode).wrappedNode
-            if(gtNode in rawMethodNodes) {
+            if (gtNode in rawMethodNodes) {
                 val methodInfo = getMethodInfo(gtNode, root.context)
                 it.setMethodInfo(methodInfo)
                 splitNodes.add(it)

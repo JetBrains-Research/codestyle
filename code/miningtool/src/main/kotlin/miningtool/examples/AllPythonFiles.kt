@@ -1,7 +1,5 @@
-
 package miningtool.examples
 
-import miningtool.common.Parser
 import miningtool.parse.antlr.python.PythonParser
 import miningtool.paths.PathMiner
 import miningtool.paths.PathRetrievalSettings
@@ -11,13 +9,13 @@ import java.io.File
 fun allPythonFiles() {
     val folder = "."
 
-    val parserProvider: () -> Parser = { PythonParser() }
-    val miner = PathMiner(parserProvider, PathRetrievalSettings(5, 5))
+    val miner = PathMiner(PathRetrievalSettings(5, 5))
+
+    val parser = PythonParser()
 
     File(folder).walkTopDown().filter { it.path.endsWith(".py") }.forEach {
-        val paths = miner.retrievePaths(it.inputStream())
-        println(it.path)
-        println(paths.size)
+        val node = parser.parse(it.inputStream()) ?: return@forEach
+        val paths = miner.retrievePaths(node)
 
         paths.forEach { path ->
             println(path.upwardNodes.first().getToken() +
