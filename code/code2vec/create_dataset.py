@@ -162,8 +162,8 @@ if __name__ == '__main__':
     create_dataset(changes_path='dataset/idea-changes/',
                    meta_file='dataset/idea-changes/change_metadata.csv',
                    entities_dict_path='dataset/entities.dict',
-                   batches_path='dataset/batches_separated_0/',
+                   batches_path='dataset/batches_separated_2/',
                    test_size=0.3,
                    pack_size=16,
-                   path_depth=0,
+                   path_depth=2,
                    data_count=72)

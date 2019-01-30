@@ -53,3 +53,9 @@ class MetaInformation:
         self._log('Loading paths')
         paths = pd.read_csv(os.path.join(self.dataset_folder, 'path_ids.csv'), sep=',', index_col=0)
         return paths
+
+    def get_method_name(self, ind):
+        return self.methods.loc[ind]['methodName']
+
+    def get_method_args(self, ind):
+        return self.methods.loc[ind]['argTypes']
