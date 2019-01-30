@@ -4,7 +4,7 @@ from PackDataset import PackDataset
 from ContextsLoader import ContextsLoader
 import numpy as np
 import time
-from loader import Loader
+from MetaInformation import MetaInformation
 
 
 # noinspection PyUnresolvedReferences
@@ -432,7 +432,7 @@ class Model:
             print('Done')
 
         loader = Loader(self.config.DATASET_FOLDER)
-        self.methods = loader.load_methods()
+        self.methods = loader._load_methods()
         self.nodes = loader.load_nodes()
         self.tokens = loader.load_tokens()
         self.paths = loader.load_paths()
