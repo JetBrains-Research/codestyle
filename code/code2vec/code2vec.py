@@ -22,6 +22,8 @@ if __name__ == '__main__':
                         help="path to save file", metavar="FILE", required=False)
     parser.add_argument("-l", "--load", dest="load_path",
                         help="path to save file", metavar="FILE", required=False)
+    parser.add_argument("-v", "--vectorize", dest="vectorize_path",
+                        help="path to methods for vectorization", metavar="FILE", required=False, nargs='+')
     parser.add_argument('--save_w2v', dest='save_w2v', required=False,
                         help="save word (token) vectors in word2vec format")
     parser.add_argument('--save_t2v', dest='save_t2v', required=False,
@@ -38,6 +40,8 @@ if __name__ == '__main__':
     print('Created model')
     if config.TRAIN_PATH:
         model.train()
+    if config.LOAD_PATH and config.VECTORIZE_PATH:
+        model.vectorize()
     if args.save_w2v is not None:
         model.save_word2vec_format(args.save_w2v, source=VocabType.Token)
         print('Origin word vectors saved in word2vec text format in: %s' % args.save_w2v)

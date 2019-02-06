@@ -19,7 +19,7 @@ class Config:
         config.PATH_MAX = 500
         config.PATH_MIN = 4
         config.TOKENS_VOCAB_SIZE = 690708
-        config.ENTITIES_VOCAB_SIZE = 6
+        config.ENTITIES_VOCAB_SIZE = 10
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 8
         config.PACK_SIZE = 16
@@ -32,6 +32,7 @@ class Config:
         config.SAVE_PATH = args.save_path
         config.LOAD_PATH = args.load_path
         config.RELEASE = args.release
+        config.VECTORIZE_PATH = args.vectorize_path
         return config
 
     @staticmethod
@@ -78,6 +79,7 @@ class Config:
         self.PACK_SIZE = 0
         self.SAVE_PATH = ''
         self.LOAD_PATH = ''
+        self.VECTORIZE_PATH = ''
         self.MAX_TO_KEEP = 0
         self.DATASET_FOLDER = ''
         self.RELEASE = False

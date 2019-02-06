@@ -5,7 +5,7 @@ from collections import Counter
 
 class PackDataset:
 
-    def __init__(self, config, train_files, test_files):
+    def __init__(self, config, train_files, test_files, placeholders):
         self.config = config
         self.mapping = {}
         self.entities_cnt = 0
@@ -13,8 +13,7 @@ class PackDataset:
         self.train_entities, self.train_packs = self.read_files(train_files, shuffle=True)
         print('Loading test...')
         self.test_entities, self.test_packs = self.read_files(test_files)
-        self.entities_placeholder, self.packs_before_placeholder, self.packs_after_placeholder = \
-            self.create_placeholders()
+        self.entities_placeholder, self.packs_before_placeholder, self.packs_after_placeholder = placeholders
         self.train_generator = None
         self.test_generator = None
         self.train_examples = len(self.train_entities)
@@ -44,11 +43,6 @@ class PackDataset:
             packs = packs[perm]
         print(counter)
         return entities, packs
-
-    def create_placeholders(self):
-        return tf.placeholder(tf.int32, [None, ]), \
-               tf.placeholder(tf.int32, [None, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3]), \
-               tf.placeholder(tf.int32, [None, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3])
 
     @staticmethod
     def _generator(packs, entities, batch_size):
