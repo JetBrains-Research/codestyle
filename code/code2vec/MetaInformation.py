@@ -59,3 +59,6 @@ class MetaInformation:
 
     def get_method_args(self, ind):
         return self.methods.loc[ind]['argTypes']
+
+    def get_method_class(self, ind):
+        return self.methods.loc[ind]['enclosingClass']
