@@ -360,22 +360,22 @@ class Model:
         keep_prob1 = 0.75
 
         # (batch, pack, max_contexts * 2, 1)
-        # starts = tf.concat([self.get_slice(before_contexts, 0), self.get_slice(after_contexts, 0)], axis=2)
+        starts = tf.concat([self.get_slice(before_contexts, 0), self.get_slice(after_contexts, 0)], axis=2)
         paths = tf.concat([self.get_slice(before_contexts, 1), self.get_slice(after_contexts, 1)], axis=2)
-        # ends = tf.concat([self.get_slice(before_contexts, 2), self.get_slice(after_contexts, 2)], axis=2)
-        # starts = tf.squeeze(starts, axis=-1)
+        ends = tf.concat([self.get_slice(before_contexts, 2), self.get_slice(after_contexts, 2)], axis=2)
+        starts = tf.squeeze(starts, axis=-1)
         paths = tf.squeeze(paths, axis=-1)
-        # ends = tf.squeeze(ends, axis=-1)
+        ends = tf.squeeze(ends, axis=-1)
         # (batch, pack, max_contexts * 2)
         # valid_mask = tf.concat([removed['mask'], added['mask']], axis=2)
 
         # (batch, pack, max_contexts * 2, dim)
-        # start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=starts)
+        start_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=starts)
         path_embed = tf.nn.embedding_lookup(params=paths_vocab, ids=paths)
-        # end_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=ends)
+        end_token_embed = tf.nn.embedding_lookup(params=tokens_vocab, ids=ends)
 
         # (batch, pack, max_contexts * 2, dim * 3)
-        context_embed = path_embed # tf.concat([start_token_embed, path_embed, end_token_embed], axis=-1)
+        context_embed = tf.concat([start_token_embed, path_embed, end_token_embed], axis=-1)
 
         if trainable:
             context_embed = tf.nn.dropout(context_embed, keep_prob1)
@@ -440,36 +440,44 @@ class Model:
             return None
 
     def vectorize(self):
-        fout = open('vectorization_21_30.csv', 'w')
-        fout.write('id,changeId,methodId,vector\n')
+        # buckets = [(1, 2), (3, 4), (5, 6), (7, 10)]  # , (31, 40), (41, 50), (51, 100), (101, 500)]
+        buckets = [(11, 20), (21, 30), (31, 40), (41, 50), (51, 100), (101, 500)]
+        for b in buckets:
+            fout = open('vectorization_attention_{}_{}.csv'.format(b[0], b[1]), 'w')
+            fout.write('id,changeId,methodId,attention,vector\n')
 
-        contexts_loader = ContextsLoader(self.config, self.config.VECTORIZE_PATH)
-        packs_before = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
-        packs_after = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
-        entities = np.zeros(1)
-        ids, change_ids, method_ids = np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE)
-        got = 0
-        for i in range(contexts_loader.size):
-            if contexts_loader.is_added(i):
-                before, after = contexts_loader.get_paths(i)
-                ind = got % self.config.PACK_SIZE
-                packs_after[0, ind] = after
-                ids[ind] = contexts_loader.ids[i]
-                change_ids[ind] = contexts_loader.change_ids[i]
-                method_ids[ind] = contexts_loader.method_after_ids[i]
-                got += 1
+            contexts_loader = ContextsLoader(self.config, [self.config.VECTORIZE_PATH[0].format(b[0], b[1])])
+            packs_before = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
+            packs_after = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
+            entities = np.zeros(1)
+            ids, change_ids, method_ids = np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE)
+            got = 0
+            for i in range(contexts_loader.size):
+                if contexts_loader.is_added(i):
+                    before, after = contexts_loader.get_paths(i)
+                    ind = got % self.config.PACK_SIZE
+                    packs_after[0, ind] = after
+                    ids[ind] = contexts_loader.ids[i]
+                    change_ids[ind] = contexts_loader.change_ids[i]
+                    method_ids[ind] = contexts_loader.method_after_ids[i]
+                    got += 1
 
-                if got % self.config.PACK_SIZE == 0:
-                    # (batch, pack, dim)
-                    contexts = self.sess.run(
-                        [self.contexts_op],
-                        feed_dict={
-                            self.packs_before_placeholder: packs_before,
-                            self.packs_after_placeholder: packs_after,
-                            self.entities_placeholder: entities
-                        })
-                    for id, change, method, vector in zip(ids, change_ids, method_ids, contexts[0][0]):
-                        fout.write(str(int(id)) + ',' +
-                                   str(int(change)) + ',' +
-                                   str(int(method)) + ',' +
-                                   ' '.join(map(str, vector)) + '\n')
+                    if got % self.config.PACK_SIZE == 0:
+                        # (batch, pack, dim)
+                        contexts, attention = self.sess.run(
+                            [self.contexts_op, self.attention_weights_op],
+                            feed_dict={
+                                self.packs_before_placeholder: packs_before,
+                                self.packs_after_placeholder: packs_after,
+                                self.entities_placeholder: entities
+                            })
+                        attention = attention.squeeze(-1)
+                        print(attention)
+                        for id, change, method, vector, att in zip(ids, change_ids, method_ids, contexts[0], attention[0]):
+                            fout.write(str(int(id)) + ',' +
+                                       str(int(change)) + ',' +
+                                       str(int(method)) + ',' +
+                                       str(float(att)) + ',' +
+                                       ' '.join(map(str, vector)) + '\n')
+            fout.close()
+            del contexts_loader
