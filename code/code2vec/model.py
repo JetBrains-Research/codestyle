@@ -41,8 +41,8 @@ class Model:
 
         if config.LOAD_PATH:
             self.load_model(sess=self.sess)
-
-        self.meta_information = MetaInformation('dataset/idea-changes')
+            if config.VECTORIZE_PATH:
+                self.meta_information = MetaInformation('dataset/idea-changes')
         print("Model successfully created")
 
     def close_session(self):
