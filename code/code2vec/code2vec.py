@@ -34,6 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--predict', action='store_true')
     parser.add_argument('--eval_train', action='store_true')
     parser.add_argument('--eval_test', action='store_true')
+    parser.add_argument('--num_classes', type=int, required=True)
     args = parser.parse_args()
 
     config = Config.get_default_config(args)

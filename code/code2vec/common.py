@@ -19,7 +19,6 @@ class Config:
         config.PATH_MAX = 500
         config.PATH_MIN = 4
         config.TOKENS_VOCAB_SIZE = 690708
-        config.ENTITIES_VOCAB_SIZE = 10
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 8
         config.PACK_SIZE = 16
@@ -35,6 +34,7 @@ class Config:
         config.VECTORIZE_PATH = args.vectorize_path
         config.EVAL_TRAIN = args.eval_train
         config.EVAL_TEST = args.eval_test
+        config.ENTITIES_VOCAB_SIZE = args.num_classes
         return config
 
     @staticmethod

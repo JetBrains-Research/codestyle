@@ -58,7 +58,6 @@ class Model:
         self.TRAIN_EXAMPLES = self.pack_dataset.train_examples
         self.TEST_EXAMPLES = self.pack_dataset.test_examples
         self.config.ENTITIES_VOCAB_SIZE = self.pack_dataset.entities_cnt
-        print(self.config.ENTITIES_VOCAB_SIZE)
         self.topk = self.config.ENTITIES_VOCAB_SIZE + 1
         print('Created pack dataset')
         self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
@@ -226,7 +225,6 @@ class Model:
         for original_entity, top_indices in results:
             class_sizes[original_entity - 1] += 1
             for i, prediction in enumerate(top_indices):
-                print(original_entity, prediction)
                 rank_matrix[original_entity - 1][prediction] += i + 1
         return rank_matrix
 
