@@ -226,6 +226,7 @@ class Model:
         for original_entity, top_indices in results:
             class_sizes[original_entity - 1] += 1
             for i, prediction in enumerate(top_indices):
+                print(original_entity, prediction)
                 rank_matrix[original_entity - 1][prediction] += i + 1
         return rank_matrix
 
