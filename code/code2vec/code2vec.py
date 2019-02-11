@@ -32,6 +32,8 @@ if __name__ == '__main__':
                         help='if specified and loading a trained model, release the loaded model for a lower model '
                              'size.')
     parser.add_argument('--predict', action='store_true')
+    parser.add_argument('--eval_train', action='store_true')
+    parser.add_argument('--eval_test', action='store_true')
     args = parser.parse_args()
 
     config = Config.get_default_config(args)

@@ -58,6 +58,7 @@ class Model:
         self.TRAIN_EXAMPLES = self.pack_dataset.train_examples
         self.TEST_EXAMPLES = self.pack_dataset.test_examples
         self.config.ENTITIES_VOCAB_SIZE = self.pack_dataset.entities_cnt
+        print(self.config.ENTITIES_VOCAB_SIZE)
         self.topk = self.config.ENTITIES_VOCAB_SIZE + 1
         print('Created pack dataset')
         self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
@@ -102,13 +103,16 @@ class Model:
                     self.save_model(self.sess, save_target)
                     print('Saved after %d epochs in: %s' % (epoch, save_target))
                 self.pack_dataset.init_epoch()
-                print('------------------------------------')
-                print('Results of evaluation on test data:')
-                self.evaluate_and_print_results(epoch, self.pack_dataset.test_generator, self.TEST_EXAMPLES)
-                print('------------------------------------')
-                print('Results of evaluation on train data:')
-                self.evaluate_and_print_results(epoch, self.pack_dataset.train_generator, self.TRAIN_EXAMPLES)
-                print('------------------------------------')
+                if self.config.EVAL_TEST:
+                    print('------------------------------------')
+                    print('Results of evaluation on test data:')
+                    self.evaluate_and_print_results(epoch, self.pack_dataset.test_generator, self.TEST_EXAMPLES)
+                    print('------------------------------------')
+                if self.config.EVAL_TRAIN:
+                    print('------------------------------------')
+                    print('Results of evaluation on train data:')
+                    self.evaluate_and_print_results(epoch, self.pack_dataset.train_generator, self.TRAIN_EXAMPLES)
+                    print('------------------------------------')
 
         if self.config.SAVE_PATH:
             self.save_model(self.sess, self.config.SAVE_PATH)

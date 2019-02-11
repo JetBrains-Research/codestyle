@@ -33,6 +33,8 @@ class Config:
         config.LOAD_PATH = args.load_path
         config.RELEASE = args.release
         config.VECTORIZE_PATH = args.vectorize_path
+        config.EVAL_TRAIN = args.eval_train
+        config.EVAL_TEST = args.eval_test
         return config
 
     @staticmethod
@@ -83,6 +85,8 @@ class Config:
         self.MAX_TO_KEEP = 0
         self.DATASET_FOLDER = ''
         self.RELEASE = False
+        self.EVAL_TRAIN = False
+        self.EVAL_TEST = False
 
 
 class common:
