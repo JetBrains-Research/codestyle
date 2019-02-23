@@ -1,0 +1,26 @@
+\section{Introduction}
+Identification of code authorship though individual fingerprings of code is a 
+prominent application of code analysis~\cite{caliskan2015anonymizing}. Demand 
+for solutions to this problem is imposed by a variety of potential applications,
+such as de-anonymization of programmers, verification of authorship and 
+detection of ghostwriting, support in copyright-related issues, and software 
+forensics.
+
+A high-level approach to author identification consists in transforming a snippet of code into a vectorized form and further application of statistical learning techniques~\cite{}.
+Many of the existing methods rely on syntactic features of code extracted from the parse tree.~\cite{}
+
+A disadvantage of approaches based on pre-defined syntactic features is their tendency to omit some of the valuable information due to a limited set of features. Neural approaches, that effectively learn implicit features from vectorized form of source code (e.g.~\cite{alsulami2017source}), lack this disadvantage. Regardless of the details of a particular technique, the task of training a machine learning model to recognize authorship of the code boils down to mapping the snippet of code into a form that represents individual patterns of developers' activity.
+
+Unlike the previous works on authorship identification, which share a common ultimate goal of distinguishing the contributions of individual developers as accurately as possible, in this work we take a slightly different angle on the problem of authorship recognition. Instead of striving to maximize the accuracy of recognition of individual developers, we focus on the aforementioned representations of developers' contribution, which could potentially be valuable for other tasks. In other words, we are looking to build the \emph{representations of individual code style}. Such representations could be applied beyond the context of authorship recognition: for example, to quantitatively analyze the fuzzy processes of learning and knowledge transfer in teams.
+
+In this study we rely on the recently introduced technique of path-based representation of code~\cite{alon2018general}, which demonstrates excellent performance in capturing the semantics of code for the task of method name prediction~\cite{alon2018code2vec}. We adapt the technique to represent changes of code, rather than its static form.
+
+*describe results here*
+
+This work makes the following contributions:
+\begin{itemize}
+    \item{Demonstration of applicability of path-based representations of code and code changes to the task of authorship identification;}
+    \item{??}
+\end{itemize}
+
+
