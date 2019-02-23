@@ -10,7 +10,7 @@ class Config:
         config = Config()
         config.NUM_EPOCHS = 10
         config.SAVE_EVERY_EPOCHS = 1
-        config.BATCH_SIZE = 4
+        config.BATCH_SIZE = 128
         config.TEST_BATCH_SIZE = config.BATCH_SIZE
         config.READING_BATCH_SIZE = 1300 * 4
         config.NUM_BATCHING_THREADS = 2
@@ -19,7 +19,6 @@ class Config:
         config.PATH_MAX = 500
         config.PATH_MIN = 4
         config.TOKENS_VOCAB_SIZE = 690708
-        config.ENTITIES_VOCAB_SIZE = 400
         config.PATHS_VOCAB_SIZE = 384641
         config.EMBEDDINGS_SIZE = 8
         config.PACK_SIZE = 16
@@ -32,6 +31,10 @@ class Config:
         config.SAVE_PATH = args.save_path
         config.LOAD_PATH = args.load_path
         config.RELEASE = args.release
+        config.VECTORIZE_PATH = args.vectorize_path
+        config.EVAL_TRAIN = args.eval_train
+        config.EVAL_TEST = args.eval_test
+        config.ENTITIES_VOCAB_SIZE = args.num_classes
         return config
 
     @staticmethod
@@ -78,9 +81,12 @@ class Config:
         self.PACK_SIZE = 0
         self.SAVE_PATH = ''
         self.LOAD_PATH = ''
+        self.VECTORIZE_PATH = ''
         self.MAX_TO_KEEP = 0
         self.DATASET_FOLDER = ''
         self.RELEASE = False
+        self.EVAL_TRAIN = False
+        self.EVAL_TEST = False
 
 
 class common:

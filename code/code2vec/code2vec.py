@@ -7,11 +7,11 @@ import sys
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("-dp", "--data", dest="data_path",
-                        help="path to preprocessed dataset", required=False)
+                        help="path to preprocessed dataset", required=False, nargs='+')
     parser.add_argument("-tp", "--test", dest="test_path",
-                        help="path to test file", metavar="FILE", required=False)
+                        help="path to test file", metavar="FILE", required=False, nargs='+')
     parser.add_argument("-cp", "--changes", dest="changes_path",
-                        help="path to changes file", metavar="FILE", required=False)
+                        help="path to changes file", metavar="FILE", required=False, nargs='+')
 
     is_training = '--train' in sys.argv or '-tr' in sys.argv
     parser.add_argument("-s", "--save", dest="save_path",
@@ -22,6 +22,8 @@ if __name__ == '__main__':
                         help="path to save file", metavar="FILE", required=False)
     parser.add_argument("-l", "--load", dest="load_path",
                         help="path to save file", metavar="FILE", required=False)
+    parser.add_argument("-v", "--vectorize", dest="vectorize_path",
+                        help="path to methods for vectorization", metavar="FILE", required=False, nargs='+')
     parser.add_argument('--save_w2v', dest='save_w2v', required=False,
                         help="save word (token) vectors in word2vec format")
     parser.add_argument('--save_t2v', dest='save_t2v', required=False,
@@ -30,6 +32,9 @@ if __name__ == '__main__':
                         help='if specified and loading a trained model, release the loaded model for a lower model '
                              'size.')
     parser.add_argument('--predict', action='store_true')
+    parser.add_argument('--eval_train', action='store_true')
+    parser.add_argument('--eval_test', action='store_true')
+    parser.add_argument('--num_classes', type=int, required=True)
     args = parser.parse_args()
 
     config = Config.get_default_config(args)
@@ -38,6 +43,8 @@ if __name__ == '__main__':
     print('Created model')
     if config.TRAIN_PATH:
         model.train()
+    if config.LOAD_PATH and config.VECTORIZE_PATH:
+        model.vectorize()
     if args.save_w2v is not None:
         model.save_word2vec_format(args.save_w2v, source=VocabType.Token)
         print('Origin word vectors saved in word2vec text format in: %s' % args.save_w2v)
