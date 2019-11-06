@@ -42,7 +42,7 @@ class IncrementalIdStorage<T> {
 }
 
 fun getNodeLabel(node: ITree, treeContext: TreeContext): String {
-    val tokenLabel = node.label
+    val tokenLabel = normalizeLabel(node.label)
     if (tokenLabel.isEmpty()) {
         val nodeType = treeContext.getTypeLabel(node)
         return "emptyToken_$nodeType"
@@ -51,6 +51,27 @@ fun getNodeLabel(node: ITree, treeContext: TreeContext): String {
         return "emptyToken_blankspaces"
     }
     return tokenLabel
+}
+
+/**
+ * The function was adopted from the original code2vec implementation in order to match their behavior:
+ * https://github.com/tech-srl/code2vec/blob/master/JavaExtractor/JPredict/src/main/java/JavaExtractor/Common/Common.java
+ */
+fun normalizeLabel(label: String): String {
+    val cleanLabel = label.toLowerCase()
+            .replace("\\\\n".toRegex(), "") // escaped new line
+            .replace("//s+".toRegex(), "") // whitespaces
+            .replace("[\"',]".toRegex(), "") // quotes, apostrophies, commas
+            .replace("\\P{Print}".toRegex(), "") // unicode weird characters
+
+    val stripped = cleanLabel.replace("[^A-Za-z]".toRegex(), "")
+
+    return if (stripped.isEmpty()) {
+        val carefulStripped = cleanLabel.replace(" ", "_")
+        carefulStripped
+    } else {
+        stripped
+    }
 }
 
 fun createPath(upward: List<ITree>, downward: List<ITree>, treeContext: TreeContext): Path {
