@@ -187,7 +187,7 @@ class RepositoryProcessor:
 
 
 def read_repo_names():
-    with open("projects.txt") as f:
+    with open("git_projects.txt") as f:
         projects = f.readlines()
         return [p.strip() for p in projects]
 
