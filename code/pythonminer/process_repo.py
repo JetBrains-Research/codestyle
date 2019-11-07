@@ -192,8 +192,8 @@ def read_repo_names():
         return [p.strip() for p in projects]
 
 
-reponames = read_repo_names()
+# reponames = read_repo_names()
 
-for reponame in reponames:
-    repo_processor = RepositoryProcessor(reponame)
-    repo_processor.explode_repo()
+# for reponame in reponames:
+#     repo_processor = RepositoryProcessor(reponame)
+#     repo_processor.explode_repo()
