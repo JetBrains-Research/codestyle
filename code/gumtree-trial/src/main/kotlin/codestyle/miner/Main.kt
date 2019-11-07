@@ -10,7 +10,7 @@ import java.io.FileWriter
 import kotlin.concurrent.thread
 
 fun readRepoNames(): List<String> {
-    return File("../python-miner/projects.txt").readLines().map { it.trim() }
+    return File("../pythonminer/projects.txt").readLines().map { it.trim() }
 }
 
 fun main(args: Array<String>) {
@@ -98,7 +98,7 @@ fun processEntries(entries: List<ChangeEntry>, pathStorage: PathStorage, methodM
 }
 
 fun processRepositoryData(repoName: String) {
-    val blobListFile = "../python-miner/data/exploded/$repoName/infos_full.csv"
+    val blobListFile = "../pythonminer/data/exploded/$repoName/infos_full.csv"
     val lines = Files.readLines(File(blobListFile), Charsets.UTF_8)
     val settings = CsvSettings(lines.first())
     println("${lines.size} entries read")
