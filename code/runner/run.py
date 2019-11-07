@@ -60,5 +60,7 @@ def run():
     os.chdir(".")
     subprocess.run(["java", "-jar", "../gumtree-trial/extract-path-contexts.jar"])
 
+    # At this point all necessary data should be in pythonminer/out
+
 
 run()
