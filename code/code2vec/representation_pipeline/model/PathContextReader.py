@@ -1,5 +1,4 @@
 import tensorflow as tf
-import common
 
 no_such_word = 0
 no_such_composite = '{} {} {}'.format(no_such_word, no_such_word, no_such_word)

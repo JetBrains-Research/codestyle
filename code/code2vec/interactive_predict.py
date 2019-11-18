@@ -1,6 +1,4 @@
-import traceback
-
-from common import common
+from representation_pipeline.model.common import common
 # from extractor import Extractor
 
 SHOW_TOP_CONTEXTS = 10

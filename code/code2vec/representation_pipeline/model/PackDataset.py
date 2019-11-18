@@ -5,14 +5,24 @@ from collections import Counter
 
 class PackDataset:
 
-    def __init__(self, config, train_files, test_files, placeholders):
+    def __init__(self, config, train_files = None, test_files = None, placeholders = None, packs = None):
         self.config = config
         self.mapping = {}
         self.entities_cnt = 0
-        print('Loading train...')
-        self.train_entities, self.train_packs = self.read_files(train_files, shuffle=True)
-        print('Loading test...')
-        self.test_entities, self.test_packs = self.read_files(test_files)
+        if not packs:
+            print('Loading train...')
+            self.train_entities, self.train_packs = self.read_files(train_files, shuffle=True)
+            print('Loading test...')
+            self.test_entities, self.test_packs = self.read_files(test_files)
+        else:
+            self.train_entities = []
+            self.train_packs = []
+            self.test_entities = []
+            self.test_packs = []
+            for entity, pack in packs:
+                self.train_entities.append(entity)
+                self.train_packs.append(pack)
+
         self.entities_placeholder, self.packs_before_placeholder, self.packs_after_placeholder = placeholders
         self.train_generator = None
         self.test_generator = None

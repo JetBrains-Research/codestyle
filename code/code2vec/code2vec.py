@@ -1,7 +1,7 @@
-from common import Config, VocabType
+from representation_pipeline.model.common import Config, VocabType
 from argparse import ArgumentParser
 # from interactive_predict import InteractivePredictor
-from model import Model
+from representation_pipeline.model.model import Model
 import sys
 
 if __name__ == '__main__':

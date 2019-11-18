@@ -1,6 +1,6 @@
 import random
 from argparse import ArgumentParser
-import common
+from representation_pipeline.model import common
 import pickle
 
 '''
