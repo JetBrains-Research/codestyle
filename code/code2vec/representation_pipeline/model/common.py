@@ -1,3 +1,6 @@
+import os
+from typing import List
+
 import re
 import json
 import sys
@@ -40,8 +43,8 @@ class Config:
     @staticmethod
     def get_without_args():
         config = Config()
-        config.NUM_EPOCHS = 60
-        config.SAVE_EVERY_EPOCHS = 3
+        config.NUM_EPOCHS = 10
+        config.SAVE_EVERY_EPOCHS = 10
         config.BATCH_SIZE = 128
         config.TEST_BATCH_SIZE = config.BATCH_SIZE
         config.READING_BATCH_SIZE = 1300 * 4
@@ -57,6 +60,34 @@ class Config:
         config.PACK_SIZE = 16
         config.MAX_TO_KEEP = 10
         config.DATASET_FOLDER = 'dataset/'
+        return config
+
+    @staticmethod
+    def get_representation_config(dataset_folder: str, load_path: str, changes_path: List[str],
+                                  n_tokens: int, n_paths: int, n_entities: int,
+                                  embedding_size: int, pack_size: int):
+        config = Config()
+        config.NUM_EPOCHS = 10
+        config.SAVE_EVERY_EPOCHS = config.NUM_EPOCHS
+        config.BATCH_SIZE = 128
+        config.READING_BATCH_SIZE = 1300 * 4
+        config.NUM_BATCHING_THREADS = 2
+        config.BATCH_QUEUE_SIZE = 30000
+        config.MAX_CONTEXTS = 200
+        config.PATH_MAX = 500
+        config.PATH_MIN = 4
+        config.TOKENS_VOCAB_SIZE = n_tokens
+        config.PATHS_VOCAB_SIZE = n_paths
+        config.EMBEDDINGS_SIZE = embedding_size
+        config.PACK_SIZE = pack_size
+        config.MAX_TO_KEEP = 1
+        config.DATASET_FOLDER = dataset_folder
+        config.ENTITIES_VOCAB_SIZE = n_entities
+        if os.path.exists(load_path + '.meta'):
+            config.LOAD_PATH = load_path
+        else:
+            config.SAVE_PATH = load_path
+        config.CHANGES_PATH = changes_path
         return config
 
     def __init__(self):

@@ -1,10 +1,11 @@
 import tensorflow as tf
 
-from PackDataset import PackDataset
-from ContextsLoader import ContextsLoader
+import os
+import scipy.special as scp
+from model.PackDataset import PackDataset
+from model.ContextsLoader import ContextsLoader
 import numpy as np
 import time
-from MetaInformation import MetaInformation
 
 
 # noinspection PyUnresolvedReferences
@@ -32,7 +33,9 @@ class Model:
         print('Built training graph')
 
         self.predict_top_indices_op, self.predict_top_scores_op, \
-        self.predict_original_entities_op, self.attention_weights_op, self.contexts_op = self.build_test_graph()
+        self.predict_original_entities_op, self.attention_weights_op, \
+        self.contexts_op, self.path_attention_op = self.build_test_graph()
+
         print('Built test graph')
 
         self.initialize_session_variables(self.sess)
@@ -41,8 +44,8 @@ class Model:
 
         if config.LOAD_PATH:
             self.load_model(sess=self.sess)
-            if config.VECTORIZE_PATH:
-                self.meta_information = MetaInformation('dataset/idea-changes')
+            # if config.VECTORIZE_PATH:
+            #     self.meta_information = MetaInformation('dataset/idea-changes')
         print("Model successfully created")
 
     def close_session(self):
@@ -53,8 +56,10 @@ class Model:
                tf.placeholder(tf.int32, [None, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3]), \
                tf.placeholder(tf.int32, [None, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3])
 
-    def init_loaders(self):
-        self.pack_dataset = PackDataset(self.config, self.config.TRAIN_PATH, self.config.TEST_PATH, self.placeholders)
+    def init_loaders(self, packs=None):
+        self.pack_dataset = PackDataset(self.config, self.config.TRAIN_PATH, self.config.TEST_PATH, self.placeholders,
+                                        packs)
+
         self.TRAIN_EXAMPLES = self.pack_dataset.train_examples
         self.TEST_EXAMPLES = self.pack_dataset.test_examples
         self.config.ENTITIES_VOCAB_SIZE = self.pack_dataset.entities_cnt
@@ -63,11 +68,11 @@ class Model:
         self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
         print('Created contexts loader')
 
-    def train(self):
+    def train(self, packs=None):
         print('Starting training')
         start_time = time.time()
 
-        self.init_loaders()
+        self.init_loaders(packs)
 
         self.summary_writer = tf.summary.FileWriter('logs/', graph=self.sess.graph)
 
@@ -336,7 +341,7 @@ class Model:
                 self.build_contexts(tokens_vocab, paths_vocab, before_contexts, after_contexts, trainable=False)
 
             # (batch, pack, dim)
-            weighted_average_contexts, _ = \
+            weighted_average_contexts, path_attentions = \
                 self.calculate_weighted_contexts(contexts_embed, None, trainable=False)
             # (batch, dim)
             weighted_average_methods, attention_weights = \
@@ -352,7 +357,7 @@ class Model:
         if normalize_scores:
             top_scores = tf.nn.softmax(top_scores)
 
-        return top_indices, top_scores, original_entities, attention_weights, weighted_average_contexts
+        return top_indices, top_scores, original_entities, attention_weights, weighted_average_contexts, path_attentions
 
     def get_slice(self, contexts, dim):
         return tf.slice(contexts, [0, 0, 0, dim], [-1, -1, self.config.MAX_CONTEXTS, 1])
@@ -437,50 +442,80 @@ class Model:
         sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer(), tf.tables_initializer()))
 
     def get_should_reuse_variables(self):
-        if self.config.TRAIN_PATH or self.config.VECTORIZE_PATH:
-            return True
-        else:
-            return None
+        return True
+        # if self.config.TRAIN_PATH or self.config.VECTORIZE_PATH:
+        #     return True
+        # else:
+        #     return None
 
-    def vectorize(self):
-        # buckets = [(1, 2), (3, 4), (5, 6), (7, 10)]  # , (31, 40), (41, 50), (51, 100), (101, 500)]
-        buckets = [(11, 20), (21, 30), (31, 40), (41, 50), (51, 100), (101, 500)]
-        for b in buckets:
-            fout = open('vectorization_attention_{}_{}.csv'.format(b[0], b[1]), 'w')
-            fout.write('id,changeId,methodId,attention,vector\n')
+    def programmer_representation(self, vectorization_file, change_entities, change_to_time_bucket, filtered_authors):
+        contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
+        packs_before = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
+        packs_after = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
+        entities = np.zeros(1)
+        ids, change_ids, method_ids, authors = np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE), \
+                                               np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE)
 
-            contexts_loader = ContextsLoader(self.config, [self.config.VECTORIZE_PATH[0].format(b[0], b[1])])
-            packs_before = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
-            packs_after = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
-            entities = np.zeros(1)
-            ids, change_ids, method_ids = np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE)
-            got = 0
-            for i in range(contexts_loader.size):
-                if contexts_loader.is_added(i):
-                    before, after = contexts_loader.get_paths(i)
-                    ind = got % self.config.PACK_SIZE
-                    packs_after[0, ind] = after
-                    ids[ind] = contexts_loader.ids[i]
-                    change_ids[ind] = contexts_loader.change_ids[i]
-                    method_ids[ind] = contexts_loader.method_after_ids[i]
-                    got += 1
+        method_att_by_author = {}
 
-                    if got % self.config.PACK_SIZE == 0:
-                        # (batch, pack, dim)
-                        contexts, attention = self.sess.run(
-                            [self.contexts_op, self.attention_weights_op],
-                            feed_dict={
-                                self.packs_before_placeholder: packs_before,
-                                self.packs_after_placeholder: packs_after,
-                                self.entities_placeholder: entities
-                            })
-                        attention = attention.squeeze(-1)
-                        print(attention)
-                        for id, change, method, vector, att in zip(ids, change_ids, method_ids, contexts[0], attention[0]):
-                            fout.write(str(int(id)) + ',' +
-                                       str(int(change)) + ',' +
-                                       str(int(method)) + ',' +
-                                       str(float(att)) + ',' +
-                                       ' '.join(map(str, vector)) + '\n')
-            fout.close()
-            del contexts_loader
+        def add_author_change(a, bucket):
+            if (a, bucket) not in method_att_by_author:
+                method_att_by_author[(a, bucket)] = []
+
+        got = 0
+        for i in range(contexts_loader.size):
+            change_id = contexts_loader.change_ids[i]
+            author = change_entities.loc[change_id]
+            if author not in filtered_authors:
+                continue
+
+            before, after = contexts_loader.get_paths(i)
+            ind = got % self.config.PACK_SIZE
+            packs_after[0, ind] = after
+            ids[ind] = contexts_loader.ids[i]
+            change_ids[ind] = contexts_loader.change_ids[i]
+            method_ids[ind] = contexts_loader.method_after_ids[i]
+            authors[ind] = author
+            got += 1
+
+            if got % self.config.PACK_SIZE == 0:
+                # (batch, pack, dim)
+                contexts, attention, path_attention = self.sess.run(
+                    [self.contexts_op, self.attention_weights_op, self.path_attention_op],
+                    feed_dict={
+                        self.packs_before_placeholder: packs_before,
+                        self.packs_after_placeholder: packs_after,
+                        self.entities_placeholder: entities
+                    })
+                attention = attention.squeeze(-1)
+                path_attention = path_attention.squeeze(-1)
+                for id, change, method, vector, att, path_att, paths, a in zip(ids, change_ids, method_ids,
+                                                                               contexts[0],
+                                                                               attention[0], path_attention[0],
+                                                                               packs_after[0], authors):
+                    add_author_change(author, change_to_time_bucket[change])
+                    method_att_by_author[(author, change_to_time_bucket[change])].append((att, vector))
+                    # fout.write(str(int(id)) + ',' +
+                    #            str(int(change)) + ',' +
+                    #            str(int(method)) + ',' +
+                    #            str(float(att)) + ',' +
+                    #            ' '.join(map(str, vector)) + ',')
+                    #
+                    # sorted_paths = np.argsort(path_att)[-10:]
+                    # fout.write(';'.join([str(path_att[ind])[:5]
+                    #                      for ind in sorted_paths]))
+                    # fout.write(',')
+                    # fout.write(';'.join([self.meta_information
+                    #                     .get_path_representation(paths[ind - self.config.MAX_CONTEXTS])
+                    #                      for ind in sorted_paths if self.config.MAX_CONTEXTS <= ind]))
+                    # fout.write('\n')
+
+        fout = open(vectorization_file, 'w')
+        fout.write('entity,time_bucket,vector\n')
+        for (author, time_bucket), method_att in method_att_by_author.items():
+            attentions = [ma[0] for ma in method_att]
+            vectors = [ma[1] for ma in method_att]
+            alpha = scp.softmax(attentions)
+            vector = np.sum([v * a for v, a in zip(vectors, alpha)], axis=0)
+            fout.write(f'{author},{time_bucket},{" ".join(map(str, vector))}\n')
+        fout.close()

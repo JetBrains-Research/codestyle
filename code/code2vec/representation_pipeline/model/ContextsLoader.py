@@ -33,7 +33,7 @@ class ContextsLoader:
 
         for i, file in enumerate(files):
             print('Reading file #{}/{}'.format(i + 1, len(files)))
-            df = pd.read_csv(file, index_col=0)
+            df = pd.read_csv(file)
             for index, row in df.iterrows():
                 cnt_before = row['pathsCountBefore']
                 cnt_after = row['pathsCountAfter']
@@ -47,8 +47,10 @@ class ContextsLoader:
                 # if cnt_before + cnt_after < self.config.PATH_MIN or \
                 #         self.config.PATH_MAX < cnt_before or self.config.PATH_MAX < cnt_after:
                 #     continue
-                ids[cnt] = index
+                # ids[cnt] = index
+                ids[cnt] = cnt
                 change_ids[cnt] = row['changeId']
+                # change_ids[cnt] = cnt
                 method_before_ids[cnt] = row['methodBeforeId']
                 method_after_ids[cnt] = row['methodAfterId']
                 set_restricted = set(row['pathsBefore'].split(';')) & set(row['pathsAfter'].split(';')) \
