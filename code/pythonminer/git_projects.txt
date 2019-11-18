@@ -1,6 +1,1 @@
-https://github.com/vovak/astminer
-https://github.com/elastic/ecs-logging-java
-https://github.com/mauricioaniche/repodriller
-https://github.com/mauricioaniche/ck
-https://github.com/JetBrains-Research/IntelliJDeodorant
-https://github.com/JetBrains/xodus
+https://github.com/JetBrains/intellij-community
