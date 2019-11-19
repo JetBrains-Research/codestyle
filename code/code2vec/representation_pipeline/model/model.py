@@ -517,5 +517,5 @@ class Model:
             vectors = [ma[1] for ma in method_att]
             alpha = scp.softmax(attentions)
             vector = np.sum([v * a for v, a in zip(vectors, alpha)], axis=0)
-            fout.write(f'{author},{time_bucket},{" ".join(map(str, vector))}\n')
+            fout.write("{},{},{}\n".format(author, time_bucket, " ".join(map(str, vector))))
         fout.close()
