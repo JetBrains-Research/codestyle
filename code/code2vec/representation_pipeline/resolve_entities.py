@@ -12,7 +12,7 @@ class EntityResolver:
 
     def get_entity(self, name: str, email: str) -> int:
         if (name, email) not in self.entity_dict:
-            raise ValueError(f"Alias [{name}, {email}] was not found")
+            raise ValueError("Alias [{}, {}] was not found".format(name, email))
         return self.entity_dict[(name, email)]
 
 
@@ -22,7 +22,8 @@ def resolve_entities(processed_folder: ProcessedFolder) -> pd.Series:
         return pd.read_csv(processed_folder.resolved_entities, index_col=0, squeeze=True)
 
     if not os.path.exists(processed_folder.entity_dict):
-        raise ValueError(f"You should provide dictionary of entities for resolving: {processed_folder.entity_dict}")
+        raise ValueError("You should provide dictionary of entities for resolving: {}"
+                         .format(processed_folder.entity_dict))
 
     print("Resolving entities for individual changes")
     entity_resolver = EntityResolver(processed_folder.entity_dict)

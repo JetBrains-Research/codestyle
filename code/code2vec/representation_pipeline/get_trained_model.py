@@ -18,11 +18,11 @@ def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embeddi
     for author, count in author_occurrences.most_common():
         if count >= min_samples:
             filtered_authors.append(author)
-    print(f"{len(filtered_authors)} authors have at least {min_samples} samples")
+    print("{} authors have at least {} samples".format(len(filtered_authors), min_samples))
 
     n_tokens = processed_folder.n_tokens()
     n_paths = processed_folder.n_paths()
-    print(f"Found {n_tokens} tokens and {n_paths} paths")
+    print("Found {} tokens and {} paths".format(n_tokens, n_paths))
 
     load_path = os.path.join(processed_folder.trained_model_folder(pack_size, min_samples), "model")
 
