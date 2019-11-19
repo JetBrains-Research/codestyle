@@ -1,2 +1,1 @@
-https://github.com/vovak/astminer
-https://github.com/elastic/ecs-logging-java
+https://github.com/JetBrains/intellij-community
