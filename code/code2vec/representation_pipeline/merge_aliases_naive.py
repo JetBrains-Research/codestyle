@@ -30,7 +30,7 @@ class NaiveEntityMerger:
 def merge_aliases_naive(processed_folder: ProcessedFolder) -> dict:
     if os.path.exists(processed_folder.entity_dict):
         print("Loading merged entities")
-        return pickle.load(processed_folder.entity_dict)
+        return pickle.load(open(processed_folder.entity_dict, 'rb'))
 
     print("Naively merging entities...")
     naive_merger = NaiveEntityMerger()
