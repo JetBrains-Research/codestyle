@@ -21,7 +21,7 @@ class ContextsLoader:
         self.size = len(self.ids)
 
     def read_files(self, files):
-        size = sum(len(open(filename).readlines()) - 1 for filename in files)
+        size = sum(len(open(filename, 'r').readlines()) - 1 for filename in files)
         ids = np.zeros(size, dtype=np.int32)
         change_ids = np.zeros(size, dtype=np.int32)
         method_before_ids = np.zeros(size, dtype=np.int32)
