@@ -24,7 +24,7 @@ class ContextsLoader:
         size = 0
         for filename in files:
             print("Processing", filename)
-            with open(filename, 'r') as f:
+            with open(filename, 'r', encoding='utf-8') as f:
                 size += len(f.readlines()) - 1
 
         # sum(len(open(filename, 'r').readlines()) - 1 for filename in files)
