@@ -29,7 +29,7 @@ def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embeddi
     config = Config.get_representation_config(dataset_folder=processed_folder.folder, load_path=load_path,
                                               changes_path=processed_folder.file_changes,
                                               n_tokens=n_tokens, n_paths=n_paths,
-                                              n_entities=len(author_occurrences),
+                                              n_entities=max(filtered_authors),
                                               embedding_size=embedding_size, pack_size=pack_size)
 
     code2vec_model = Model(config)
