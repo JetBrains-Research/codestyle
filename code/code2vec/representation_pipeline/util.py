@@ -4,11 +4,15 @@ import pandas as pd
 
 
 class ProcessedFolder:
-    def __init__(self, folder):
+    def __init__(self, folder: str, init_run_number: int):
         self.folder = folder
         self.generated_folder = os.path.join(folder, "generated_data")
         if not os.path.exists(self.generated_folder):
             os.mkdir(self.generated_folder)
+
+        self.run_folder = None
+        self.run_number = init_run_number
+        self.set_run_number(init_run_number)
 
         self.change_metadata_file = os.path.join(folder, "change_metadata.csv")
         self.method_ids_file = os.path.join(folder, "method_ids.csv")
@@ -29,11 +33,17 @@ class ProcessedFolder:
         self._trained_model_folder = "trained_model_{}_packs_{}_samples"
         self._vectorization_file = "vectorization_{}_packs_{}_samples.csv"
 
+    def set_run_number(self, run_number: int):
+        self.run_number = run_number
+        self.run_folder = os.path.join(self.generated_folder, "run_{:02d}".format(run_number))
+        if not os.path.exists(self.run_folder):
+            os.mkdir(self.run_folder)
+
     def time_buckets_split(self, n_buckets):
         return os.path.join(self.generated_folder, self._time_buckets_split.format(n_buckets))
 
     def entity_packs(self, pack_size):
-        return os.path.join(self.generated_folder, self._entity_packs.format(pack_size))
+        return os.path.join(self.run_folder, self._entity_packs.format(pack_size))
 
     def n_tokens(self):
         if self._n_tokens is None:
@@ -48,10 +58,10 @@ class ProcessedFolder:
         return self._n_paths
 
     def trained_model_folder(self, pack_size: int, min_samples: int):
-        folder = os.path.join(self.generated_folder, self._trained_model_folder.format(pack_size, min_samples))
+        folder = os.path.join(self.run_folder, self._trained_model_folder.format(pack_size, min_samples))
         if not os.path.exists(folder):
             os.mkdir(folder)
         return folder
 
     def vectorization_file(self, pack_size: int, min_samples: int):
-        return os.path.join(self.generated_folder, self._vectorization_file.format(pack_size, min_samples))
+        return os.path.join(self.run_folder, self._vectorization_file.format(pack_size, min_samples))
