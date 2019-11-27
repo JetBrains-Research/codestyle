@@ -19,5 +19,8 @@ projects = [l.strip() for l in open("../../pythonminer/projects.txt", "r").readl
 for p in projects:
     project_folder = ProcessedFolder("../../pythonminer/out/" + p + "/")
     merge_aliases_naive(project_folder)
+
+    # run everything below in a for-loop
+    # explicitly set TF seed
     tf.reset_default_graph()
     get_representations(project_folder, args.pack_size, args.embedding_size, args.min_samples, args.n_time_buckets)

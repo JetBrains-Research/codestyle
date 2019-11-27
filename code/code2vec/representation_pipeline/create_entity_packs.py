@@ -10,7 +10,10 @@ from util import ProcessedFolder
 
 
 def create_entity_packs(processed_folder: ProcessedFolder, pack_size: int) -> List[Tuple[int, List]]:
+    #add a flag to force recalc
+
     if os.path.exists(processed_folder.entity_packs(pack_size)):
+        #Do not load if the flag is set
         print("Loading packs for each entity")
         return pickle.load(open(processed_folder.entity_packs(pack_size), 'rb'))
 
