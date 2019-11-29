@@ -15,7 +15,7 @@ class EntityResolver:
         if (name, email) not in self.entity_dict:
             #    raise ValueError("Alias [{}, {}] was not found".format(name, email))
             self.unknown_count += 1
-            self.entity_dict[(name, email)] = -self.unknown_count
+            self.entity_dict[(name, email)] = 1000 + self.unknown_count
 
         return self.entity_dict[(name, email)]
 
