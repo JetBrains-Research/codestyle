@@ -23,9 +23,9 @@ class EntityResolver:
 
 
 def dump_unknowns(unknowns, path):
-    with open(path, 'w') as f:
+    with open(path, 'w', encoding="utf-8") as f:
         for (name, email) in unknowns:
-            f.write(name + " " + email)
+            f.write("{} {}\n".format(name, email))
     print("Dumped " + len(unknowns) + " entities to " + path)
 
 
