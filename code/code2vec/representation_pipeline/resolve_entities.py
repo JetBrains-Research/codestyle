@@ -22,11 +22,11 @@ class EntityResolver:
         return self.entity_dict[(name, email)]
 
 
-def dump_unknowns(unknowns):
-    unknowns_path = "unknown_pairs.csv"
-    with open(unknowns_path, 'w') as f:
+def dump_unknowns(unknowns, path):
+    with open(path, 'w') as f:
         for (name, email) in unknowns:
             f.write(name + " " + email)
+    print("Dumped " + len(unknowns) + " entities to " + path)
 
 
 def resolve_entities(processed_folder: ProcessedFolder) -> pd.Series:
@@ -53,7 +53,7 @@ def resolve_entities(processed_folder: ProcessedFolder) -> pd.Series:
     print("Resolved entities saved on disk")
 
     print("{} unknown aliases in EntityResolver".format(entity_resolver.unknown_count))
-    dump_unknowns(entity_resolver.unknowns)
+    dump_unknowns(entity_resolver.unknowns, processed_folder.unknown_entities)
 
     return change_entities
 
