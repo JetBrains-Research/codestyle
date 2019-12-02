@@ -24,9 +24,10 @@ class EntityResolver:
 
 def dump_unknowns(unknowns, path):
     with open(path, 'w', encoding="utf-8") as f:
+        f.write("name,email\n")
         for (name, email) in unknowns:
-            f.write("{} {}\n".format(name, email))
-    print("Dumped " + len(unknowns) + " entities to " + path)
+            f.write("{},{}\n".format(name, email))
+    print("Dumped " + str(len(unknowns)) + " entities to " + path)
 
 
 def resolve_entities(processed_folder: ProcessedFolder) -> pd.Series:
