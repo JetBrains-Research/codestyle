@@ -4,7 +4,7 @@ import pandas as pd
 
 
 class ProcessedFolder:
-    def __init__(self, folder: str, init_run_number: int):
+    def __init__(self, folder: str, init_run_number: int = 1):
         self.folder = folder
         self.generated_folder = os.path.join(folder, "generated_data")
         if not os.path.exists(self.generated_folder):
