@@ -9,11 +9,25 @@ from util import ProcessedFolder
 class EntityResolver:
     def __init__(self, path_to_entity_dict: str):
         self.entity_dict = pickle.load(open(path_to_entity_dict, 'rb'))
+        self.unknown_count = 0
+        self.unknowns = []
 
     def get_entity(self, name: str, email: str) -> int:
         if (name, email) not in self.entity_dict:
-            raise ValueError("Alias [{}, {}] was not found".format(name, email))
+            #    raise ValueError("Alias [{}, {}] was not found".format(name, email))
+            self.unknown_count += 1
+            self.entity_dict[(name, email)] = 1000 + self.unknown_count
+            self.unknowns.append((name, email))
+
         return self.entity_dict[(name, email)]
+
+
+def dump_unknowns(unknowns, path):
+    with open(path, 'w', encoding="utf-8") as f:
+        f.write("name,email\n")
+        for (name, email) in unknowns:
+            f.write("{},{}\n".format(name, email))
+    print("Dumped " + str(len(unknowns)) + " entities to " + path)
 
 
 def resolve_entities(processed_folder: ProcessedFolder) -> pd.Series:
@@ -38,6 +52,10 @@ def resolve_entities(processed_folder: ProcessedFolder) -> pd.Series:
     )
     change_entities.to_csv(processed_folder.resolved_entities, header=True)
     print("Resolved entities saved on disk")
+
+    print("{} unknown aliases in EntityResolver".format(entity_resolver.unknown_count))
+    dump_unknowns(entity_resolver.unknowns, processed_folder.unknown_entities)
+
     return change_entities
 
 
