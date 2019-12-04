@@ -4,7 +4,8 @@ import numpy as np
 from argparse import ArgumentParser
 
 from get_representations import get_representations
-from merge_aliases_naive import merge_aliases_naive
+# from merge_aliases_naive import merge_aliases_naive
+from merge_aliases_bipartite import merge_aliases_bipartite
 from util import ProcessedFolder
 
 
@@ -27,7 +28,7 @@ args = parser.parse_args()
 projects = [l.strip() for l in open("../../pythonminer/projects.txt", "r").readlines()]
 for p in projects:
     project_folder = ProcessedFolder("../../pythonminer/out/" + p + "/", args.init_run_number)
-    merge_aliases_naive(project_folder)
+    merge_aliases_bipartite(project_folder)
     for n_run in range(args.init_run_number, args.init_run_number + args.n_runs):
         project_folder.set_run_number(n_run)
         tf.reset_default_graph()
