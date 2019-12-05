@@ -489,10 +489,10 @@ class Model:
                     })
                 attention = attention.squeeze(-1)
                 path_attention = path_attention.squeeze(-1)
-                for id, change, method, vector, att, path_att, paths, a in zip(ids, change_ids, method_ids,
-                                                                               contexts[0],
-                                                                               attention[0], path_attention[0],
-                                                                               packs_after[0], authors):
+                for id, change, method, vector, att, path_att, paths, author in zip(ids, change_ids, method_ids,
+                                                                                    contexts[0],
+                                                                                    attention[0], path_attention[0],
+                                                                                    packs_after[0], authors):
                     add_author_change(author, change_to_time_bucket[change])
                     method_att_by_author[(author, change_to_time_bucket[change])].append((att, vector))
                     # fout.write(str(int(id)) + ',' +
