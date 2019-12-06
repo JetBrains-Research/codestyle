@@ -28,6 +28,7 @@ class ProcessedFolder:
         self.unknown_entities = os.path.join(self.generated_folder, "unknown_entities.txt")
         self.file_changes = [os.path.join(folder, f) for f in os.listdir(folder) if f.startswith("file_changes")]
         self._time_buckets_split = "time_buckets_split_{}.pkl"
+        self._time_buckets_range = "time_buckets_range_{}.csv"
         self._entity_packs = "entity_packs_{}.pkl"
         self._n_tokens = None
         self._n_paths = None
@@ -42,6 +43,9 @@ class ProcessedFolder:
 
     def time_buckets_split(self, n_buckets):
         return os.path.join(self.generated_folder, self._time_buckets_split.format(n_buckets))
+
+    def time_buckets_range(self, n_buckets):
+        return os.path.join(self.generated_folder, self._time_buckets_range.format(n_buckets))
 
     def entity_packs(self, pack_size):
         return os.path.join(self.run_folder, self._entity_packs.format(pack_size))
