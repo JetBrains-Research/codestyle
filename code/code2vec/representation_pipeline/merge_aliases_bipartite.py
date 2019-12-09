@@ -108,7 +108,7 @@ class BipartiteEntityMerger:
     def dump(self, processed_folder: ProcessedFolder):
         pickle.dump(self.entity_dict, open(processed_folder.entity_dict, 'wb'))
         pickle.dump(self.reverse_dict, open(processed_folder.reversed_entity_dict, 'wb'))
-        with open(processed_folder.readable_entities, 'w') as fout:
+        with open(processed_folder.readable_entities, 'w', encoding='utf-8') as fout:
             fout.write("entity,names,emails\n")
             for ent, maps in self.reverse_dict.items():
                 fout.write("{},{},{}\n".format(
