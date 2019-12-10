@@ -68,6 +68,10 @@ class Model:
         self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
         print('Created contexts loader')
 
+    def print_run_number(self):
+        if (self.config.RUN_NUMBER):
+            print('(Run {} of {})'.format(self.config.RUN_NUMBER, self.config.TOTAL_RUNS))
+
     def train(self, packs=None):
         print('Starting training')
         start_time = time.time()
@@ -81,7 +85,7 @@ class Model:
 
         for epoch in range(1, self.config.NUM_EPOCHS + 1):
             print("Epoch #{}".format(epoch))
-
+            self.print_run_number()
             self.pack_dataset.init_epoch()
             batch_num = 0
             sum_loss = 0

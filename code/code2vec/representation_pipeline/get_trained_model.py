@@ -11,7 +11,7 @@ from model.model import Model
 
 
 def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embedding_size: int,
-                      min_samples: int) -> Tuple[Model, List]:
+                      min_samples: int, n_run: int, total_runs: int) -> Tuple[Model, List]:
     print("Gathering model configuration")
     author_occurrences, _, _, _ = compute_occurrences(processed_folder)
     filtered_authors = []
@@ -50,4 +50,4 @@ if __name__ == '__main__':
     parser.add_argument("--embedding_size", type=int, required=True)
     parser.add_argument("--min_samples", type=int, default=0)
     args = parser.parse_args()
-    get_trained_model(ProcessedFolder(args.data_folder), args.pack_size, args.embedding_size, args.min_samples)
+    get_trained_model(ProcessedFolder(args.data_folder), args.pack_size, args.embedding_size, args.min_samples, 0, 0)

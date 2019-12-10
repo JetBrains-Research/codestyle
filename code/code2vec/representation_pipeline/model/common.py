@@ -65,7 +65,7 @@ class Config:
     @staticmethod
     def get_representation_config(dataset_folder: str, load_path: str, changes_path: List[str],
                                   n_tokens: int, n_paths: int, n_entities: int,
-                                  embedding_size: int, pack_size: int):
+                                  embedding_size: int, pack_size: int, n_run: int, total_runs: int):
         config = Config()
         config.NUM_EPOCHS = 10
         config.SAVE_EVERY_EPOCHS = config.NUM_EPOCHS
@@ -83,6 +83,8 @@ class Config:
         config.MAX_TO_KEEP = 1
         config.DATASET_FOLDER = dataset_folder
         config.ENTITIES_VOCAB_SIZE = n_entities
+        config.RUN_NUMBER = n_run
+        config.TOTAL_RUNS = total_runs
         if os.path.exists(load_path + '.meta'):
             config.LOAD_PATH = load_path
         else:
