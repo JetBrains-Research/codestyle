@@ -30,7 +30,8 @@ def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embeddi
                                               changes_path=processed_folder.file_changes,
                                               n_tokens=n_tokens, n_paths=n_paths,
                                               n_entities=max(filtered_authors),
-                                              embedding_size=embedding_size, pack_size=pack_size)
+                                              embedding_size=embedding_size, pack_size=pack_size,
+                                              n_run=n_run, total_runs=total_runs)
 
     code2vec_model = Model(config)
     if config.LOAD_PATH == '':
