@@ -33,7 +33,7 @@ class ProcessedFolder:
         self._entity_packs = "entity_packs_{}.pkl"
         self._n_tokens = None
         self._n_paths = None
-        self._trained_model_folder = "trained_model_{}_packs_{}_samples"
+        self._trained_model_folder = "trained_model_{}_packs_{}_samples{}"
         self._vectorization_file = "vectorization_{}_packs_{}_samples.csv"
 
     def set_run_number(self, run_number: int):
@@ -63,8 +63,10 @@ class ProcessedFolder:
             self._n_paths = len(paths)
         return self._n_paths
 
-    def trained_model_folder(self, pack_size: int, min_samples: int):
-        folder = os.path.join(self.run_folder, self._trained_model_folder.format(pack_size, min_samples))
+    def trained_model_folder(self, pack_size: int, min_samples: int, mask_tokens: bool):
+        folder = os.path.join(self.run_folder, self._trained_model_folder.format(pack_size, min_samples), "") \
+            if not mask_tokens \
+            else os.path.join(self.run_folder, self._trained_model_folder.format(pack_size, min_samples), "_masked_tokens")
         if not os.path.exists(folder):
             os.mkdir(folder)
         return folder

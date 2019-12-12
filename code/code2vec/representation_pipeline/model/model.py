@@ -56,7 +56,7 @@ class Model:
                tf.placeholder(tf.int32, [None, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3]), \
                tf.placeholder(tf.int32, [None, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3])
 
-    def init_loaders(self, packs=None):
+    def init_loaders(self, packs=None, mask_tokens=False):
         self.pack_dataset = PackDataset(self.config, self.config.TRAIN_PATH, self.config.TEST_PATH, self.placeholders,
                                         packs)
 
@@ -65,14 +65,14 @@ class Model:
         self.config.ENTITIES_VOCAB_SIZE = self.pack_dataset.entities_cnt
         self.topk = self.config.ENTITIES_VOCAB_SIZE + 1
         print('Created pack dataset')
-        self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
+        self.contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH, mask_tokens=mask_tokens)
         print('Created contexts loader')
 
-    def train(self, packs=None):
+    def train(self, packs=None, mask_tokens=False):
         print('Starting training')
         start_time = time.time()
 
-        self.init_loaders(packs)
+        self.init_loaders(packs, mask_tokens)
 
         self.summary_writer = tf.summary.FileWriter('logs/', graph=self.sess.graph)
 

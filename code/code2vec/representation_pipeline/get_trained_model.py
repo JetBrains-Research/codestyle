@@ -11,7 +11,7 @@ from model.model import Model
 
 
 def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embedding_size: int,
-                      min_samples: int) -> Tuple[Model, List]:
+                      min_samples: int, mask_tokens: bool) -> Tuple[Model, List]:
     print("Gathering model configuration")
     author_occurrences, _, _, _ = compute_occurrences(processed_folder)
     filtered_authors = []
@@ -24,7 +24,7 @@ def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embeddi
     n_paths = processed_folder.n_paths()
     print("Found {} tokens and {} paths".format(n_tokens, n_paths))
 
-    load_path = os.path.join(processed_folder.trained_model_folder(pack_size, min_samples), "model")
+    load_path = os.path.join(processed_folder.trained_model_folder(pack_size, min_samples, mask_tokens), "model")
 
     config = Config.get_representation_config(dataset_folder=processed_folder.folder, load_path=load_path,
                                               changes_path=processed_folder.file_changes,
@@ -37,7 +37,7 @@ def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embeddi
         print("Did not find a pretrained model")
         packs = create_entity_packs(processed_folder, pack_size)
         packs = [pack for pack in packs if pack[0] in filtered_authors]
-        code2vec_model.train(packs)
+        code2vec_model.train(packs, mask_tokens)
         print("Completed training")
 
     return code2vec_model, filtered_authors
@@ -49,5 +49,7 @@ if __name__ == '__main__':
     parser.add_argument("--pack_size", type=int, required=True)
     parser.add_argument("--embedding_size", type=int, required=True)
     parser.add_argument("--min_samples", type=int, default=0)
+    parser.add_argument("--mask_tokens", type=bool, default=False)
     args = parser.parse_args()
-    get_trained_model(ProcessedFolder(args.data_folder), args.pack_size, args.embedding_size, args.min_samples)
+    get_trained_model(ProcessedFolder(args.data_folder), args.pack_size, args.embedding_size, args.min_samples,
+                      args.mask_tokens)

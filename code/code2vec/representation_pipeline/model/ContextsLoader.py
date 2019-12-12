@@ -10,17 +10,17 @@ class ContextsLoader:
     DELETED = 1
     CHANGED = 2
 
-    def __init__(self, config, files, seed=42):
+    def __init__(self, config, files, seed=42, mask_tokens=False):
         np.random.seed(seed)
         self.config = config
         self.ids, self.rev_ids, self.paths_before, self.paths_after, self.dim_ids, self.types, \
         self.change_ids, self.method_before_ids, self.method_after_ids \
-            = self.read_files(files)
+            = self.read_files(files, mask_tokens)
         print('Loaded all files')
         # self.default_value = tf.constant([empty_context for _ in range(self.config.MAX_CONTEXTS)], dtype=tf.int32)
         self.size = len(self.ids)
 
-    def read_files(self, files):
+    def read_files(self, files, mask_tokens):
         size = 0
         for filename in files:
             print("Processing", filename)
@@ -68,6 +68,12 @@ class ContextsLoader:
                 self.unpack_and_trim(row['pathsAfter'], paths_after[cnt], set_restricted)
                 cnt += 1
             del df
+
+        if mask_tokens:
+            paths_before[:, :, 0] = 0
+            paths_before[:, :, 2] = 0
+            paths_after[:, :, 0] = 0
+            paths_after[:, :, 2] = 0
 
         reverse_ids = np.ones(max(ids) + 1, dtype=np.int32) * -1
         for i, ind in enumerate(ids):
