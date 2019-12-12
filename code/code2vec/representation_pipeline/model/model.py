@@ -458,7 +458,7 @@ class Model:
         packs_after = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
         entities = np.zeros(1)
         ids, change_ids, method_ids, authors = np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE), \
-                                               np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE)
+                                               np.zeros(self.config.PACK_SIZE), np.zeros(self.config.PACK_SIZE, dtype=np.int32)
 
         method_att_by_author = {}
 
