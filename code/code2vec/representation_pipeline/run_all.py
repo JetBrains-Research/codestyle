@@ -35,4 +35,4 @@ for p in projects:
         tf.reset_default_graph()
         fix_seed(n_run)
         get_representations(project_folder, args.pack_size, args.embedding_size, args.min_samples, args.n_time_buckets,
-                            args.mask_tokens)
+                            n_run, args.n_runs, args.mask_tokens)

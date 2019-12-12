@@ -10,13 +10,12 @@ from util import ProcessedFolder
 
 
 def get_representations(processed_folder: ProcessedFolder, pack_size: int, embedding_size: int, min_samples: int,
-                        n_time_buckets: int, mask_tokens: bool):
+                        n_time_buckets: int, n_run: int, total_runs: int, mask_tokens: bool):
     if os.path.exists(processed_folder.vectorization_file(pack_size, min_samples)):
         print("Loading previously computed representations")
         return pd.read_csv(processed_folder.vectorization_file(pack_size, min_samples), index_col=0)
 
-    code2vec_model, filtered_authors = get_trained_model(processed_folder, pack_size, embedding_size, min_samples,
-                                                         mask_tokens)
+    code2vec_model, filtered_authors = get_trained_model(processed_folder, pack_size, embedding_size, min_samples, n_run, total_runs, mask_tokens)
     change_authors = resolve_entities(processed_folder)
     change_to_time_bucket = time_split(processed_folder, n_time_buckets)
     print("Computing representations")
@@ -37,4 +36,5 @@ if __name__ == '__main__':
     parser.add_argument("--mask_tokens", type=bool, default=False)
     args = parser.parse_args()
     get_representations(ProcessedFolder(args.data_folder), args.pack_size, args.embedding_size, args.min_samples,
-                        args.n_time_buckets, args.mask_tokens)
+                        args.n_time_buckets, 0, 0, args.mask_tokens)
+

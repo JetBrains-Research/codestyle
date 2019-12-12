@@ -11,7 +11,8 @@ from model.model import Model
 
 
 def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embedding_size: int,
-                      min_samples: int, mask_tokens: bool) -> Tuple[Model, List]:
+                      min_samples: int, n_run: int, total_runs: int, mask_tokens: bool) -> Tuple[Model, List]:
+
     print("Gathering model configuration")
     author_occurrences, _, _, _ = compute_occurrences(processed_folder)
     filtered_authors = []
@@ -30,7 +31,8 @@ def get_trained_model(processed_folder: ProcessedFolder, pack_size: int, embeddi
                                               changes_path=processed_folder.file_changes,
                                               n_tokens=n_tokens, n_paths=n_paths,
                                               n_entities=max(filtered_authors),
-                                              embedding_size=embedding_size, pack_size=pack_size)
+                                              embedding_size=embedding_size, pack_size=pack_size,
+                                              n_run=n_run, total_runs=total_runs)
 
     code2vec_model = Model(config)
     if config.LOAD_PATH == '':
@@ -51,5 +53,6 @@ if __name__ == '__main__':
     parser.add_argument("--min_samples", type=int, default=0)
     parser.add_argument("--mask_tokens", type=bool, default=False)
     args = parser.parse_args()
+
     get_trained_model(ProcessedFolder(args.data_folder), args.pack_size, args.embedding_size, args.min_samples,
-                      args.mask_tokens)
+                      0, 0, args.mask_tokens)
