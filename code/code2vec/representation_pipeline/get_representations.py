@@ -21,7 +21,7 @@ def get_representations(processed_folder: ProcessedFolder, pack_size: int, embed
     print("Computing representations")
     code2vec_model.programmer_representation(
         processed_folder.vectorization_file(pack_size, min_samples), change_authors,
-        change_to_time_bucket, filtered_authors
+        change_to_time_bucket, filtered_authors, mask_tokens
     )
     print("Representations saved on disk")
 

@@ -66,7 +66,7 @@ class ProcessedFolder:
     def trained_model_folder(self, pack_size: int, min_samples: int, mask_tokens: bool):
         folder = os.path.join(self.run_folder, self._trained_model_folder.format(pack_size, min_samples), "") \
             if not mask_tokens \
-            else os.path.join(self.run_folder, self._trained_model_folder.format(pack_size, min_samples), "_masked_tokens")
+            else os.path.join(self.run_folder, self._trained_model_folder.format(pack_size, min_samples, "_masked_tokens"))
         if not os.path.exists(folder):
             os.mkdir(folder)
         return folder

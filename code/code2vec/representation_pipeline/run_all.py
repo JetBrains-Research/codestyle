@@ -22,7 +22,7 @@ parser.add_argument("--min_samples", type=int, default=0)
 parser.add_argument("--n_time_buckets", type=int, required=True)
 parser.add_argument("--n_runs", type=int, required=True)
 parser.add_argument("--init_run_number", type=int, default=1)
-parser.add_argument("--mask_tokens", type=bool, default=False)
+parser.add_argument("--mask_tokens", action="store_true")
 
 args = parser.parse_args()
 

@@ -452,8 +452,8 @@ class Model:
         # else:
         #     return None
 
-    def programmer_representation(self, vectorization_file, change_entities, change_to_time_bucket, filtered_authors):
-        contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH)
+    def programmer_representation(self, vectorization_file, change_entities, change_to_time_bucket, filtered_authors, mask_tokens):
+        contexts_loader = ContextsLoader(self.config, self.config.CHANGES_PATH, mask_tokens=mask_tokens)
         packs_before = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
         packs_after = np.zeros((1, self.config.PACK_SIZE, self.config.MAX_CONTEXTS, 3))
         entities = np.zeros(1)
